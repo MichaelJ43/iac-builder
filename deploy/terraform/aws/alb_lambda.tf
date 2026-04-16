@@ -64,6 +64,8 @@ resource "aws_iam_role_policy_attachment" "lambda_basic" {
 resource "aws_lambda_function" "api" {
   function_name = "${var.project_name}-api"
   role            = aws_iam_role.lambda_exec.arn
+  # Terraform requires handler + runtime for Zip; provided.al2023 ignores handler at invoke time.
+  handler         = "bootstrap"
   runtime         = "provided.al2023"
   architectures   = ["arm64"]
   filename        = var.lambda_package
