@@ -1,5 +1,7 @@
 # AWS deploy: S3 + CloudFront + ALB + Lambda (us-east-1)
 
+**Hand-holding checklist:** create a copy at the repo root named **`AWS_SETUP_WALKTHROUGH.local.md`** — that path is **gitignored** so you can keep account-specific notes without committing them. This file (`docs/aws-deploy.md`) stays the short technical reference.
+
 This stack is tuned for **low cost** in a personal account:
 
 - **CloudFront** (`PriceClass_100`) is the single HTTPS entry: static UI from **S3** (OAI) and `/api/*` + `/healthz` forwarded to a regional **Application Load Balancer**.

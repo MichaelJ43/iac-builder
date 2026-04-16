@@ -18,3 +18,6 @@ dist/
 *.tfstate
 *.tfstate.*
 .terraform.lock.hcl
+
+# Local-only AWS setup walkthrough (may hold account-specific notes; not committed)
+AWS_SETUP_WALKTHROUGH.local.md
