@@ -30,6 +30,46 @@ func TestHealthz(t *testing.T) {
 	}
 }
 
+func TestPreview_CloudFormation(t *testing.T) {
+	h, cleanup, err := export.NewTestHandler("file::memory:?cache=shared", mustDecodeHex(testMasterKeyHex))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer cleanup()
+	s := httptest.NewServer(h)
+	defer s.Close()
+
+	body := map[string]any{
+		"state": map[string]any{
+			"framework":        "cloudformation",
+			"cloud":            "aws",
+			"region":           "us-east-1",
+			"vpc_id":           "vpc-1",
+			"subnet_id":        "subnet-1",
+			"instance_type":    "t3.micro",
+			"ami":              "ami-12345",
+			"security_group_ids": []string{"sg-1"},
+		},
+	}
+	b, _ := json.Marshal(body)
+	res, err := http.Post(s.URL+"/api/v1/preview", "application/json", bytes.NewReader(b))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.StatusCode != http.StatusOK {
+		t.Fatalf("status %d", res.StatusCode)
+	}
+	var out struct {
+		Files map[string]string `json:"files"`
+	}
+	if err := json.NewDecoder(res.Body).Decode(&out); err != nil {
+		t.Fatal(err)
+	}
+	if out.Files["template.yaml"] == "" {
+		t.Fatal("expected template.yaml")
+	}
+}
+
 func TestPreview_Terraform(t *testing.T) {
 	h, cleanup, err := export.NewTestHandler("file::memory:?cache=shared", mustDecodeHex(testMasterKeyHex))
 	if err != nil {
