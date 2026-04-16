@@ -17,9 +17,10 @@ This stack is tuned for **low cost** in a personal account:
      - `token.actions.githubusercontent.com:aud` = `sts.amazonaws.com`
      - `token.actions.githubusercontent.com:sub` = `repo:MichaelJ43/iac-builder:ref:refs/heads/main` (tighten further with GitHub Environments if you like).
    - Attach policies that allow Terraform to manage the resources in [`deploy/terraform/aws`](../deploy/terraform/aws). For a first pass in a sandbox account, **AdministratorAccess** is simplest; narrow over time.
-3. **GitHub repository secrets**
+3. **GitHub repository configuration** (either **Secrets** or **Variables** — same names; secrets take precedence if both exist)
    - `AWS_DEPLOY_ROLE_ARN` — ARN of the role above.
-   - `TF_STATE_BUCKET` — state bucket from step 1.
+   - `TF_STATE_BUCKET` — state bucket **name** from step 1 (not an ARN).  
+   Prefer **Secrets** for `AWS_DEPLOY_ROLE_ARN` on public repos (variables are readable by anyone with repo read access).
 
 ## Manual deploy (optional)
 

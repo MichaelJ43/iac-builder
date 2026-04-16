@@ -116,13 +116,15 @@ That only proves your **user** credentials. OIDC is exercised only inside GitHub
 
 ---
 
-## 6. Add GitHub repository secrets
+## 6. Add GitHub repository secrets or variables
 
-1. GitHub → your repository → **Settings** → **Secrets and variables** → **Actions** → **New repository secret**.
-2. Create **`TF_STATE_BUCKET`** — value = S3 bucket name from step 2 (not an ARN).
-3. Create **`AWS_DEPLOY_ROLE_ARN`** — value = full IAM role ARN from step 4.
+1. GitHub → your repository → **Settings** → **Secrets and variables** → **Actions**.
+2. Under **Variables** *or* **Secrets**, create (names must match exactly):
+   - **`TF_STATE_BUCKET`** — S3 bucket **name** from step 2 (not an ARN). A **Variable** is fine (not secret material).
+   - **`AWS_DEPLOY_ROLE_ARN`** — full IAM role ARN from step 4. Prefer a **Secret** on public repositories (Variables are visible to anyone who can read the repo).
+3. The workflows use `secrets.* || vars.*` for each name; if both are set, the **Secret** wins.
 
-No other secrets are required for the stock workflows.
+No other configuration is required for the stock workflows.
 
 ---
 
