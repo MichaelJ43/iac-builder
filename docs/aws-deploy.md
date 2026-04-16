@@ -1,6 +1,6 @@
 # AWS deploy: S3 + CloudFront + ALB + Lambda (us-east-1)
 
-**Hand-holding checklist:** create a copy at the repo root named **`AWS_SETUP_WALKTHROUGH.local.md`** — that path is **gitignored** so you can keep account-specific notes without committing them. This file (`docs/aws-deploy.md`) stays the short technical reference.
+**Hand-holding checklist:** use **[`docs/aws-setup-walkthrough.md`](aws-setup-walkthrough.md)** (committed). For a **non-committed** copy with your account IDs and ARNs, copy it to the repo root as **`AWS_SETUP_WALKTHROUGH.local.md`** (that path is **gitignored**).
 
 This stack is tuned for **low cost** in a personal account:
 
