@@ -1,0 +1,18 @@
+Guidelines:
+I want this to be a git enabled project
+This is a new project, all source code should be under ./src and all test code should be under ./test
+All supporting files should either be at the root or under appropriately named directories (ie. ./docs)
+I want comprehensive documentation, both on what the application does and how to use it
+I want Well written code that is maintainable and follows best practices
+I want Well written and comprehensive unit tests
+I want UI based tests
+I want Component tests that verify the application as a whole
+The language it is written in is not important, but I want it to be as fast as possible, so choose a language using that as a main criteria
+I want an AGENTS.md file that holds AI context related to the repository and instructions to review the file on each change.
+
+Process for Completing this:
+Phase 1: Plan the project
+Phase 2: Follow through on the plan, be sure to handle unit tests by following TDD
+Phase 3: Verify, run unit tests, run component tests, run any UI based tests
+Phase 4: Compile supplemental documentation and instructions
+Phase 5: Create the release pipeline, including versioning, test, and compile/release process, keep in mind the various platforms to support

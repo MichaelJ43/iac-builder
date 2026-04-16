@@ -1,0 +1,15 @@
+.DS_Store
+*.sqlite
+*.sqlite3
+data/
+node_modules/
+dist/
+.env
+.env.local
+coverage/
+playwright-report/
+test-results/
+*.log
+.idea/
+.vscode/
+bin/

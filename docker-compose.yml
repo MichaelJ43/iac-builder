@@ -1,0 +1,29 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+      args:
+        APP_VERSION: ${APP_VERSION:-0.1.0}
+    environment:
+      LISTEN_ADDR: ":8080"
+      SQLITE_DSN: "file:/data/app.sqlite?_pragma=busy_timeout(5000)&_pragma=foreign_keys(1)"
+      IAC_MASTER_KEY: "${IAC_MASTER_KEY:?set IAC_MASTER_KEY to 64 hex chars}"
+      APP_VERSION: "${APP_VERSION:-0.1.0}"
+      CORS_ORIGIN: "${CORS_ORIGIN:-*}"
+    volumes:
+      - iac_data:/data
+    ports:
+      - "8080:8080"
+
+  ui:
+    build:
+      context: .
+      dockerfile: Dockerfile.ui
+    depends_on:
+      - api
+    ports:
+      - "8081:80"
+
+volumes:
+  iac_data:
