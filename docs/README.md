@@ -3,3 +3,4 @@
 - [Local development](local-dev.md)
 - [Security model](security.md)
 - [Future ideas / roadmap](future-ideas.md)
+- [AWS deploy (S3 + CloudFront + ALB + Lambda)](aws-deploy.md)

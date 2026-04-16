@@ -1,0 +1,70 @@
+name: Destroy AWS stack
+
+on:
+  workflow_dispatch:
+    inputs:
+      aws_region:
+        description: "Region of the stack to destroy"
+        required: true
+        default: "us-east-1"
+      project_name:
+        description: "Resource prefix used for this stack"
+        required: true
+        default: "iac-builder"
+      confirm:
+        description: 'Type DELETE to confirm full teardown'
+        required: true
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  AWS_REGION: ${{ inputs.aws_region }}
+  TF_IN_AUTOMATION: "true"
+
+jobs:
+  destroy:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: deploy/terraform/aws
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Confirm
+        run: |
+          test "${{ inputs.confirm }}" = "DELETE" || (echo 'Set confirm to DELETE' && exit 1)
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.22.x"
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.9.0"
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Build throwaway Lambda zip (required variable for destroy refresh)
+        run: |
+          chmod +x "$GITHUB_WORKSPACE/scripts/build-lambda-zip.sh"
+          "$GITHUB_WORKSPACE/scripts/build-lambda-zip.sh" "$GITHUB_WORKSPACE/dist/lambda.zip"
+
+      - name: Terraform init
+        run: |
+          terraform init -input=false \
+            -backend-config="bucket=${{ secrets.TF_STATE_BUCKET }}" \
+            -backend-config="key=iac-builder/${{ inputs.project_name }}/${{ inputs.aws_region }}/terraform.tfstate" \
+            -backend-config="region=${{ inputs.aws_region }}" \
+            -backend-config="encrypt=true"
+
+      - name: Terraform destroy
+        run: |
+          terraform destroy -auto-approve -input=false \
+            -var="aws_region=${{ inputs.aws_region }}" \
+            -var="project_name=${{ inputs.project_name }}" \
+            -var="lambda_package=$GITHUB_WORKSPACE/dist/lambda.zip"

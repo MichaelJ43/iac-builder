@@ -13,3 +13,8 @@ test-results/
 .idea/
 .vscode/
 bin/
+dist/
+.terraform/
+*.tfstate
+*.tfstate.*
+.terraform.lock.hcl

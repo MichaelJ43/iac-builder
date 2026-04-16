@@ -1,0 +1,4 @@
+# Copy to terraform.tfvars (never commit secrets).
+aws_region     = "us-east-1"
+project_name   = "iac-builder"
+lambda_package = "/absolute/path/to/lambda.zip"

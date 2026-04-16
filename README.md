@@ -61,3 +61,8 @@ See **[`AGENTS.md`](AGENTS.md)** — merged PR titles may include `+(semver:majo
 - [`docs/local-dev.md`](docs/local-dev.md)
 - [`docs/security.md`](docs/security.md)
 - [`docs/future-ideas.md`](docs/future-ideas.md)
+- [`docs/aws-deploy.md`](docs/aws-deploy.md) — S3 + CloudFront + ALB + Lambda in **us-east-1**, GitHub Actions deploy/destroy
+
+## AWS serverless hosting
+
+Manual **Deploy AWS** and **Destroy AWS** workflows build the Lambda zip, run Terraform (`deploy/terraform/aws`), sync the Vite build to S3, and invalidate CloudFront. See [`docs/aws-deploy.md`](docs/aws-deploy.md) for OIDC setup and multi-region notes.
