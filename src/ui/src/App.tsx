@@ -78,7 +78,7 @@ export function App() {
   );
 
   return (
-    <div className="layout">
+    <div className={`layout${sliderOpen ? " layout--sliderOpen" : ""}`}>
       <div className="main">
         <h1>iac-builder</h1>
         <p>Guided IaC for AWS EC2 (MVP). Pick a framework first.</p>
@@ -150,6 +150,7 @@ export function App() {
               <p className="help">
                 Optional. Adds a comment in generated Terraform linking the subnet to a VPC for humans
                 reviewing the file—not required for <code>terraform apply</code> when <code>subnet_id</code> is set.
+                If <strong>Show code</strong> is open, it can sit on top of this area—close it or scroll to see this field.
               </p>
               <input
                 value={state.vpc_id}
