@@ -50,11 +50,15 @@ body {
 .slider.open {
   transform: translateX(0);
 }
+/* Override global `button { width: 100% }` — without this, the tab spans the viewport and looks like a horizontal bar */
 .slider-tab {
   position: fixed;
   right: 0;
   top: 40%;
   z-index: 21;
+  width: auto;
+  max-width: none;
+  margin-bottom: 0;
   writing-mode: vertical-rl;
   transform: rotate(180deg);
   background: #1e293b;
