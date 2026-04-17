@@ -1,3 +1,5 @@
+import { normalizeFetchError } from "./fetchUtils";
+
 const base = "";
 
 export type Framework =
@@ -57,7 +59,7 @@ export async function preview(state: WizardState): Promise<Record<string, string
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ state }),
   });
-  if (!res.ok) throw new Error(await res.text());
+  if (!res.ok) throw new Error(await normalizeFetchError(res));
   const data = (await res.json()) as { files: Record<string, string> };
   return data.files;
 }
@@ -76,7 +78,7 @@ export async function securityRecommendations(state: WizardState): Promise<Secur
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ state }),
   });
-  if (!res.ok) throw new Error(await res.text());
+  if (!res.ok) throw new Error(await normalizeFetchError(res));
   const data = (await res.json()) as { recommendations: SecurityRecommendation[] };
   return data.recommendations;
 }
