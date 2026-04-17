@@ -32,6 +32,25 @@ export type WizardState = {
   enable_ebs_encryption: boolean;
 };
 
+/** Default wizard used by the UI and preset coercion. */
+export function emptyWizardState(): WizardState {
+  return {
+    framework: "",
+    cloud: "aws",
+    region: "",
+    vpc_id: "",
+    subnet_id: "",
+    instance_type: "",
+    ami: "",
+    key_name: "",
+    security_group_ids: [],
+    associate_public_ip: false,
+    imdsv2_required: false,
+    ssh_cidr: "",
+    enable_ebs_encryption: false,
+  };
+}
+
 export async function preview(state: WizardState): Promise<Record<string, string>> {
   const res = await fetch(`${base}/api/v1/preview`, {
     method: "POST",

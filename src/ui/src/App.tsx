@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { Framework, WizardState } from "./api";
-import { preview, securityRecommendations } from "./api";
+import { emptyWizardState, preview, securityRecommendations } from "./api";
+import { PresetDiffTable } from "./PresetDiffTable";
+import { getPresetWizard, listPresets, type PresetSummary } from "./presetApi";
 import { useWizardUndoState } from "./useWizardUndoState";
 
 const frameworks: { id: Framework; label: string }[] = [
@@ -11,28 +13,40 @@ const frameworks: { id: Framework; label: string }[] = [
   { id: "aws_cdk", label: "AWS CDK" },
 ];
 
-const emptyState = (): WizardState => ({
-  framework: "",
-  cloud: "aws",
-  region: "",
-  vpc_id: "",
-  subnet_id: "",
-  instance_type: "",
-  ami: "",
-  key_name: "",
-  security_group_ids: [],
-  associate_public_ip: false,
-  imdsv2_required: false,
-  ssh_cidr: "",
-  enable_ebs_encryption: false,
-});
-
 export function App() {
-  const { state, setWizard: setState, undo, redo, canUndo, canRedo } = useWizardUndoState(emptyState());
+  const { state, setWizard: setState, undo, redo, canUndo, canRedo } = useWizardUndoState(emptyWizardState());
   const [sliderOpen, setSliderOpen] = useState(false);
   const [previewText, setPreviewText] = useState("");
   const [hints, setHints] = useState<string[]>([]);
   const [err, setErr] = useState<string | null>(null);
+
+  const [presets, setPresets] = useState<PresetSummary[]>([]);
+  const [presetListErr, setPresetListErr] = useState<string | null>(null);
+  const [selectedPresetId, setSelectedPresetId] = useState("");
+  const [compareLoading, setCompareLoading] = useState(false);
+  const [presetCompareErr, setPresetCompareErr] = useState<string | null>(null);
+  const [diffBaseline, setDiffBaseline] = useState<WizardState | null>(null);
+  const [diffBaselineName, setDiffBaselineName] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const list = await listPresets();
+        if (!cancelled) {
+          setPresets(list);
+          setPresetListErr(null);
+        }
+      } catch (e) {
+        if (!cancelled) {
+          setPresetListErr(String(e));
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const canShowCloud = state.framework !== "";
   const canShowRegion = canShowCloud;
@@ -91,6 +105,66 @@ export function App() {
             Redo
           </button>
         </div>
+
+        <div className="step preset-compare">
+          <label>Compare wizard to saved preset</label>
+          <p className="help">
+            Pick a preset stored by the API, then <strong>Set baseline</strong>. The table updates as you edit the
+            form; it does not change your answers.
+          </p>
+          {presetListErr && <p className="preset-compare__err">{presetListErr}</p>}
+          <div className="preset-compare__row">
+            <select
+              value={selectedPresetId}
+              onChange={(e) => setSelectedPresetId(e.target.value)}
+              disabled={presets.length === 0}
+              aria-label="Saved preset for comparison"
+            >
+              <option value="">{presets.length === 0 ? "No presets in API" : "Select a preset…"}</option>
+              {presets.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
+              ))}
+            </select>
+            <button
+              type="button"
+              className="toolbar-btn"
+              disabled={!selectedPresetId || compareLoading}
+              onClick={() => {
+                void (async () => {
+                  setPresetCompareErr(null);
+                  setCompareLoading(true);
+                  try {
+                    const w = await getPresetWizard(selectedPresetId);
+                    const meta = presets.find((p) => p.id === selectedPresetId);
+                    setDiffBaseline(w);
+                    setDiffBaselineName(meta?.name ?? selectedPresetId);
+                  } catch (e) {
+                    setPresetCompareErr(String(e));
+                  } finally {
+                    setCompareLoading(false);
+                  }
+                })();
+              }}
+            >
+              {compareLoading ? "Loading…" : "Set baseline"}
+            </button>
+          </div>
+          {presetCompareErr && <p className="preset-compare__err">{presetCompareErr}</p>}
+          {diffBaseline && diffBaselineName && (
+            <PresetDiffTable
+              name={diffBaselineName}
+              baseline={diffBaseline}
+              current={state}
+              onClear={() => {
+                setDiffBaseline(null);
+                setDiffBaselineName(null);
+              }}
+            />
+          )}
+        </div>
+
         <p className="help">
           This flow targets a single <code>aws_instance</code> (or equivalent) in one region.{" "}
           <strong>Subnet</strong> is required so the instance has a network placement.{" "}
@@ -102,6 +176,7 @@ export function App() {
         <div className="step">
           <label>IaC framework</label>
           <select
+            aria-label="IaC framework"
             value={state.framework}
             onChange={(e) =>
               setState((s) => ({ ...s, framework: e.target.value as Framework }))

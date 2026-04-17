@@ -18,7 +18,13 @@ export default defineConfig({
     include: ["../../test/unit/ui/**/*.test.ts", "../../test/unit/ui/**/*.test.tsx"],
     coverage: {
       provider: "v8",
-      include: ["src/wizardHistory.ts", "src/useWizardUndoState.ts"],
+      include: [
+        "src/wizardHistory.ts",
+        "src/useWizardUndoState.ts",
+        "src/wizardDiff.ts",
+        "src/presetApi.ts",
+        "src/PresetDiffTable.tsx",
+      ],
       thresholds: {
         lines: 80,
         branches: 80,

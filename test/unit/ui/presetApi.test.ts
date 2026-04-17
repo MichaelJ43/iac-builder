@@ -1,0 +1,152 @@
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { coerceWizardState, getPresetWizard, listPresets } from "@ui/presetApi";
+
+describe("coerceWizardState", () => {
+  it("returns defaults for non-objects", () => {
+    expect(coerceWizardState(null).region).toBe("");
+    expect(coerceWizardState(undefined).cloud).toBe("aws");
+    expect(coerceWizardState("x").framework).toBe("");
+  });
+
+  it("reads nested state wrapper", () => {
+    const w = coerceWizardState({
+      state: { region: "ap-south-1", framework: "pulumi", cloud: "aws" },
+    });
+    expect(w.region).toBe("ap-south-1");
+    expect(w.framework).toBe("pulumi");
+  });
+
+  it("ignores invalid framework strings", () => {
+    const w = coerceWizardState({ framework: "not-a-real-fw", region: "us-east-1" });
+    expect(w.framework).toBe("");
+    expect(w.region).toBe("us-east-1");
+  });
+
+  it("accepts each supported framework id", () => {
+    for (const fw of ["terraform", "cloudformation", "pulumi", "azure_bicep", "aws_cdk"] as const) {
+      expect(coerceWizardState({ framework: fw }).framework).toBe(fw);
+    }
+  });
+
+  it("coerces explicit empty framework", () => {
+    expect(coerceWizardState({ framework: "" }).framework).toBe("");
+  });
+
+  it("maps security_group_ids when present", () => {
+    const w = coerceWizardState({
+      security_group_ids: ["sg-2", "sg-1"],
+    });
+    expect(w.security_group_ids).toEqual(["sg-2", "sg-1"]);
+  });
+
+  it("uses root when state is null", () => {
+    const w = coerceWizardState({ state: null, region: "ca-central-1" } as unknown);
+    expect(w.region).toBe("ca-central-1");
+  });
+
+  it("falls back when booleans are not boolean", () => {
+    const w = coerceWizardState({
+      associate_public_ip: "yes" as unknown as boolean,
+      imdsv2_required: 1 as unknown as boolean,
+      enable_ebs_encryption: null as unknown as boolean,
+    });
+    expect(w.associate_public_ip).toBe(false);
+    expect(w.imdsv2_required).toBe(false);
+    expect(w.enable_ebs_encryption).toBe(false);
+  });
+
+  it("ignores non-array security_group_ids", () => {
+    const w = coerceWizardState({ security_group_ids: "sg-1" as unknown as string[] });
+    expect(w.security_group_ids).toEqual([]);
+  });
+
+  it("uses root when state is not an object", () => {
+    const w = coerceWizardState({ state: "wrapped", region: "us-west-2" } as unknown);
+    expect(w.region).toBe("us-west-2");
+  });
+
+  it("preserves true booleans from JSON", () => {
+    const w = coerceWizardState({
+      associate_public_ip: true,
+      imdsv2_required: true,
+      enable_ebs_encryption: true,
+    });
+    expect(w.associate_public_ip).toBe(true);
+    expect(w.imdsv2_required).toBe(true);
+    expect(w.enable_ebs_encryption).toBe(true);
+  });
+});
+
+describe("listPresets", () => {
+  beforeEach(() => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => ({
+        ok: true,
+        json: async () => ({ presets: [{ id: "1", name: "A", created_at: "t" }] }),
+      }))
+    );
+  });
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("returns presets array", async () => {
+    const p = await listPresets();
+    expect(p).toHaveLength(1);
+    expect(p[0]?.id).toBe("1");
+  });
+
+  it("defaults missing presets to empty", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => ({
+        ok: true,
+        json: async () => ({}),
+      }))
+    );
+    expect(await listPresets()).toEqual([]);
+  });
+
+  it("throws when list response is not ok", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => ({
+        ok: false,
+        text: async () => "nope",
+      }))
+    );
+    await expect(listPresets()).rejects.toThrow("nope");
+  });
+});
+
+describe("getPresetWizard", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("throws when response is not ok", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => ({
+        ok: false,
+        text: async () => "missing",
+      }))
+    );
+    await expect(getPresetWizard("x")).rejects.toThrow("missing");
+  });
+
+  it("parses JSON body", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => ({
+        ok: true,
+        json: async () => ({ region: "eu-central-1", framework: "terraform" }),
+      }))
+    );
+    const w = await getPresetWizard("abc");
+    expect(w.region).toBe("eu-central-1");
+    expect(w.framework).toBe("terraform");
+    expect(vi.mocked(fetch).mock.calls[0]?.[0]).toContain("/presets/abc");
+  });
+});

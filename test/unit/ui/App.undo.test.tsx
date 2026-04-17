@@ -26,7 +26,7 @@ describe("App undo toolbar", () => {
     const undo = screen.getByRole("button", { name: /undo/i }) as HTMLButtonElement;
     expect(undo.disabled).toBe(true);
 
-    const framework = screen.getByRole("combobox") as HTMLSelectElement;
+    const framework = screen.getByRole("combobox", { name: /IaC framework/i }) as HTMLSelectElement;
     await user.selectOptions(framework, "terraform");
 
     const region = screen.getByPlaceholderText("us-east-1") as HTMLInputElement;

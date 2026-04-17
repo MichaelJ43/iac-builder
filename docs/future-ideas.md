@@ -8,7 +8,7 @@ Items are ordered by **recommended delivery priority** for this repository (impa
 
 | Priority | Theme | Summary |
 |----------|--------|--------|
-| **P1** | UX | Undo/redo, diffs vs preset, optional AI assist behind strict policy |
+| **P1** | UX | Diffs between a saved preset and the live wizard; optional AI assist behind strict policy |
 | **P2** | Security depth | Least-privilege IAM hints, org guardrails, CIS-style toggles, secrets manager integration |
 | **P3** | Wizard presets and catalogs | Shareable presets, import/export, versioning, quick-builder stack catalog (API presets exist; UI and workflows still thin) |
 | **P4** | More IaC frameworks and deeper emitters | Full CloudFormation, Pulumi, Bicep, CDK emitters; OpenTofu notes; Crossplane compositions |
@@ -22,7 +22,7 @@ Items are ordered by **recommended delivery priority** for this repository (impa
 
 ## P1 — UX
 
-Undo history, diffs between preset and current state, optional AI assist with strict policy controls.
+Show how the live wizard diverges from a **saved preset baseline** (read-only comparison). Optional AI assist with strict policy controls.
 
 ## P2 — Security depth
 
