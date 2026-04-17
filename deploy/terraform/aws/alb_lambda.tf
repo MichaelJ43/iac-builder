@@ -1,14 +1,32 @@
 resource "aws_security_group" "alb" {
   name_prefix = "${var.project_name}-alb-"
-  description = "ALB ingress for CloudFront origin (HTTP)"
+  description = var.alb_https_enabled ? "ALB ingress: HTTP redirect + HTTPS for app" : "ALB ingress for CloudFront origin (HTTP)"
   vpc_id      = data.aws_vpc.default.id
 
+  lifecycle {
+    precondition {
+      condition     = !var.alb_https_enabled || (var.alb_certificate_arn != "" && var.api_public_hostname != "")
+      error_message = "When alb_https_enabled is true, set alb_certificate_arn (ACM in the ALB region) and api_public_hostname (FQDN on that certificate, CNAME to the ALB)."
+    }
+  }
+
   ingress {
-    description = "HTTP from internet (CloudFront uses public connectivity to origin)"
+    description = var.alb_https_enabled ? "HTTP from internet (301 redirect to HTTPS)" : "HTTP from internet (CloudFront origin)"
     from_port   = 80
     to_port     = 80
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  dynamic "ingress" {
+    for_each = var.alb_https_enabled ? [1] : []
+    content {
+      description = "HTTPS from internet (CloudFront origin and direct clients)"
+      from_port   = 443
+      to_port     = 443
+      protocol    = "tcp"
+      cidr_blocks = ["0.0.0.0/0"]
+    }
   }
 
   egress {
@@ -36,6 +54,9 @@ resource "aws_lb_target_group" "api" {
   name_prefix = "tg${random_id.tg_suffix.hex}"
   target_type = "lambda"
   vpc_id      = data.aws_vpc.default.id
+  # aws-lambda-go-api-proxy returns MultiValueHeaders only; ALB rejects that when
+  # multi-value headers are disabled (502 LambdaInvalidResponse).
+  lambda_multi_value_headers_enabled = true
 
   lifecycle {
     create_before_destroy = true
@@ -102,6 +123,29 @@ resource "aws_lb_listener" "http" {
   load_balancer_arn = aws_lb.api.arn
   port              = 80
   protocol          = "HTTP"
+
+  default_action {
+    type             = var.alb_https_enabled ? "redirect" : "forward"
+    target_group_arn = var.alb_https_enabled ? null : aws_lb_target_group.api.arn
+
+    dynamic "redirect" {
+      for_each = var.alb_https_enabled ? [1] : []
+      content {
+        port        = "443"
+        protocol    = "HTTPS"
+        status_code = "HTTP_301"
+      }
+    }
+  }
+}
+
+resource "aws_lb_listener" "https" {
+  count              = var.alb_https_enabled ? 1 : 0
+  load_balancer_arn  = aws_lb.api.arn
+  port               = 443
+  protocol           = "HTTPS"
+  ssl_policy         = "ELBSecurityPolicy-TLS13-1-2-2021-06"
+  certificate_arn    = var.alb_certificate_arn
 
   default_action {
     type             = "forward"
