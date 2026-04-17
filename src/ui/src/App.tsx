@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { Framework, WizardState } from "./api";
 import { preview, securityRecommendations } from "./api";
+import { useWizardUndoState } from "./useWizardUndoState";
 
 const frameworks: { id: Framework; label: string }[] = [
   { id: "terraform", label: "Terraform (HCL)" },
@@ -27,7 +28,7 @@ const emptyState = (): WizardState => ({
 });
 
 export function App() {
-  const [state, setState] = useState<WizardState>(emptyState);
+  const { state, setWizard: setState, undo, redo, canUndo, canRedo } = useWizardUndoState(emptyState());
   const [sliderOpen, setSliderOpen] = useState(false);
   const [previewText, setPreviewText] = useState("");
   const [hints, setHints] = useState<string[]>([]);
@@ -82,6 +83,14 @@ export function App() {
       <div className="main">
         <h1>iac-builder</h1>
         <p>Guided IaC for AWS EC2 (MVP). Pick a framework first.</p>
+        <div className="wizard-toolbar">
+          <button type="button" className="toolbar-btn" onClick={undo} disabled={!canUndo}>
+            Undo
+          </button>
+          <button type="button" className="toolbar-btn" onClick={redo} disabled={!canRedo}>
+            Redo
+          </button>
+        </div>
         <p className="help">
           This flow targets a single <code>aws_instance</code> (or equivalent) in one region.{" "}
           <strong>Subnet</strong> is required so the instance has a network placement.{" "}

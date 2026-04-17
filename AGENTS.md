@@ -9,7 +9,7 @@ Read this file at the start of substantive work on this repository, and refresh 
 ## Layout
 
 - Application code: [`src/api`](src/api) (Go module `github.com/MichaelJ43/iac-builder/api`), [`src/ui`](src/ui) (TypeScript + React).
-- Automated tests: [`test/component`](test/component) (Go black-box HTTP tests), [`test/unit/ui`](test/unit/ui) (Vitest), [`test/ui`](test/ui) (Playwright). Go unit tests live next to packages under `src/api` (standard Go layout); TypeScript tests stay under `test/` per project conventions.
+- Automated tests: [`test/component`](test/component) (Go black-box HTTP tests), [`test/unit/ui`](test/unit/ui) (Vitest specs; executed via `npm run test:unit` from [`src/ui`](src/ui)), [`test/ui`](test/ui) (Playwright). Go unit tests live next to packages under `src/api` (standard Go layout); TypeScript tests stay under `test/` per project conventions.
 - Docs: [`docs`](docs). Roadmap: [`docs/future-ideas.md`](docs/future-ideas.md).
 
 ## How to run tests
@@ -24,7 +24,7 @@ Or individually:
 
 - `cd src/api && GOSUMDB=off go test ./...`
 - `cd test/component && GOSUMDB=off go test ./...`
-- `cd test/unit/ui && npm ci && npm test`
+- `cd src/ui && npm ci && npm run test:unit` (and `npm run test:unit:coverage` when checking coverage thresholds)
 - `cd test/ui && npm ci && npx playwright install chromium && npm test` (set `CI=true` for non-interactive).
 
 ## Test coverage expectations
@@ -43,7 +43,7 @@ These rules apply to **new or materially changed** behavior (not drive-by refact
 
 ### UI (`src/ui`)
 
-- For **new or updated** TypeScript/React under [`src/ui/src`](src/ui/src), keep **at least 80% line coverage** on the **files you touch**, using Vitest from [`test/unit/ui`](test/unit/ui) (`npm test -- --coverage` when coverage is configured there).
+- For **new or updated** TypeScript/React under [`src/ui/src`](src/ui/src), keep **at least 80% line coverage** on the **files you touch**, using Vitest from [`src/ui`](src/ui) (`npm run test:unit:coverage`; specs live under [`test/unit/ui`](test/unit/ui)).
 - Add **Vitest + React Testing Library** tests for **user-visible** behavior of those features (treat these as UI component tests). Pure helpers can rely on unit tests only; interactive flows should use RTL (`render`, `userEvent`, `waitFor`, etc.) as appropriate.
 
 ### Playwright (`test/ui`)
