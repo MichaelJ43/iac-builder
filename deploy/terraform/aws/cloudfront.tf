@@ -3,12 +3,15 @@ locals {
   # The default ALB DNS name cannot use a typical ACM cert, so we use api_public_hostname when TLS is on.
   cloudfront_api_origin_domain   = var.alb_https_enabled ? var.api_public_hostname : aws_lb.api.dns_name
   cloudfront_api_origin_protocol = var.alb_https_enabled ? "https-only" : "http-only"
+  # depends_on must be a static list (no concat). Referencing the listener here ties
+  # CloudFront updates to listener creation. Use length() so https[0] is never indexed when count=0.
+  cloudfront_listener_dep_id = length(aws_lb_listener.https) > 0 ? aws_lb_listener.https[0].id : aws_lb_listener.http.id
 }
 
 resource "aws_cloudfront_distribution" "app" {
   enabled             = true
   is_ipv6_enabled     = true
-  comment             = "${var.project_name} UI + API"
+  comment             = "${var.project_name} UI + API (${local.cloudfront_listener_dep_id})"
   default_root_object = "index.html"
   price_class         = var.cloudfront_price_class
 
@@ -95,8 +98,8 @@ resource "aws_cloudfront_distribution" "app" {
     response_page_path    = "/index.html"
   }
 
-  depends_on = concat(
-    [aws_s3_bucket_policy.ui, aws_lb_listener.http],
-    var.alb_https_enabled ? [aws_lb_listener.https[0]] : []
-  )
+  depends_on = [
+    aws_s3_bucket_policy.ui,
+    aws_lb_listener.http,
+  ]
 }
