@@ -18,6 +18,16 @@ output "alb_dns_name" {
   value       = aws_lb.api.dns_name
 }
 
+output "alb_https_enabled" {
+  description = "Whether the ALB terminates TLS on 443 and CloudFront uses HTTPS to the API origin."
+  value       = var.alb_https_enabled
+}
+
+output "api_public_hostname" {
+  description = "When ALB HTTPS is enabled, the FQDN used as the CloudFront API origin (CNAME this to alb_dns_name). Empty otherwise."
+  value       = var.alb_https_enabled ? var.api_public_hostname : ""
+}
+
 output "lambda_function_name" {
   value = aws_lambda_function.api.function_name
 }

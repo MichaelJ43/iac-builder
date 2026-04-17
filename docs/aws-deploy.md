@@ -6,6 +6,7 @@ This stack is tuned for **low cost** in a personal account:
 
 - **CloudFront** (`PriceClass_100`) is the single HTTPS entry: static UI from **S3** (OAI) and `/api/*` + `/healthz` forwarded to a regional **Application Load Balancer**.
 - The **ALB** uses a **Lambda** target (no EC2/Fargate). Same Go `chi` router as containers, packaged as `provided.al2023` with a `bootstrap` binary.
+- **Optional ALB HTTPS** (`alb_https_enabled`): ACM certificate on **443**, **301** from **80 → 443**, and CloudFront **HTTPS-only** to the API origin. Requires an **ACM cert in the same region as the ALB** and a **public hostname** (on that cert) whose DNS **CNAME** points at the ALB. Without this, the stack keeps **HTTP** on port **80** only (still fine behind CloudFront for many setups).
 - **SQLite on `/tmp`** inside Lambda is **ephemeral** (profiles reset on cold starts). For durable storage, evolve toward **RDS/DynamoDB/EFS** later.
 
 ## Prerequisites
@@ -33,6 +34,12 @@ terraform apply \
   -var="aws_region=$AWS_REGION" \
   -var="project_name=iac-builder" \
   -var="lambda_package=$(pwd)/../../../dist/lambda.zip"
+
+# Optional: terminate TLS on the ALB (see docs/aws-setup-walkthrough.md §6b).
+# terraform apply ... \
+#   -var="alb_https_enabled=true" \
+#   -var="alb_certificate_arn=arn:aws:acm:us-east-1:123456789012:certificate/xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" \
+#   -var="api_public_hostname=api.example.com"
 ```
 
 Then build the UI, `aws s3 sync` to the `ui_bucket_name` output, and create a CloudFront invalidation.

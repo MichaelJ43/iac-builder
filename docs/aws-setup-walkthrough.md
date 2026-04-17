@@ -124,7 +124,19 @@ That only proves your **user** credentials. OIDC is exercised only inside GitHub
    - **`AWS_DEPLOY_ROLE_ARN`** — full IAM role ARN from step 4. Prefer a **Secret** on public repositories (Variables are visible to anyone who can read the repo).
 3. The workflows use `secrets.* || vars.*` for each name; if both are set, the **Secret** wins.
 
-No other configuration is required for the stock workflows.
+No other configuration is required for the stock workflows **unless** you want **TLS on the ALB** (optional; see §6b).
+
+### 6b. (Optional) ACM certificate + hostname for ALB HTTPS
+
+Use this when you want the ALB to listen on **443** with a certificate, **redirect HTTP to HTTPS**, and have **CloudFront talk HTTPS** to the origin.
+
+1. **Request a public ACM certificate** in the **same region as the ALB** (for the default stack, **us-east-1**). Include a name you control, e.g. `api.example.com` (DNS validation in Route 53 or your DNS provider).
+2. After Terraform has created the ALB once (first deploy without §6b is fine), create a **DNS CNAME** from that hostname to the **`alb_dns_name`** output (the `*.elb.amazonaws.com` name).
+3. In GitHub **Actions** → **Secrets and variables**:
+   - **`ALB_CERTIFICATE_ARN`** (recommended: **Secret**) — the ACM certificate ARN.
+   - **`API_PUBLIC_HOSTNAME`** (**Variable** is enough) — the same FQDN on the certificate (e.g. `api.example.com`), **no** `https://` prefix.
+
+The **Deploy AWS** and **Destroy AWS** workflows pass these into Terraform when **both** are set, enabling `alb_https_enabled`. If either is unset, the stack stays on **HTTP :80** only for the ALB.
 
 ---
 
@@ -199,3 +211,4 @@ Terraform destroys resources in dependency order. Empty the state bucket separat
 - [ ] `AWS_DEPLOY_ROLE_ARN` = IAM role **ARN**
 - [ ] OIDC trust `sub` matches your repo and branch strategy
 - [ ] Default VPC has ≥ 2 subnets in **us-east-1**
+- [ ] (Optional ALB HTTPS) `ALB_CERTIFICATE_ARN` + `API_PUBLIC_HOSTNAME` + DNS CNAME to ALB

@@ -1,3 +1,10 @@
+locals {
+  # CloudFront must use a hostname present on the origin certificate when using HTTPS.
+  # The default ALB DNS name cannot use a typical ACM cert, so we use api_public_hostname when TLS is on.
+  cloudfront_api_origin_domain   = var.alb_https_enabled ? var.api_public_hostname : aws_lb.api.dns_name
+  cloudfront_api_origin_protocol = var.alb_https_enabled ? "https-only" : "http-only"
+}
+
 resource "aws_cloudfront_distribution" "app" {
   enabled             = true
   is_ipv6_enabled     = true
@@ -15,13 +22,13 @@ resource "aws_cloudfront_distribution" "app" {
   }
 
   origin {
-    domain_name = aws_lb.api.dns_name
+    domain_name = local.cloudfront_api_origin_domain
     origin_id   = "api"
 
     custom_origin_config {
-      http_port              = 80
-      https_port             = 443
-      origin_protocol_policy = "http-only"
+      http_port                = 80
+      https_port               = 443
+      origin_protocol_policy   = local.cloudfront_api_origin_protocol
       origin_ssl_protocols     = ["TLSv1.2"]
       origin_read_timeout      = 60
       origin_keepalive_timeout = 5
@@ -88,8 +95,8 @@ resource "aws_cloudfront_distribution" "app" {
     response_page_path    = "/index.html"
   }
 
-  depends_on = [
-    aws_s3_bucket_policy.ui,
-    aws_lb_listener.http,
-  ]
+  depends_on = concat(
+    [aws_s3_bucket_policy.ui, aws_lb_listener.http],
+    var.alb_https_enabled ? [aws_lb_listener.https[0]] : []
+  )
 }

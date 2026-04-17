@@ -27,6 +27,8 @@ jobs:
       TF_IN_AUTOMATION: "true"
       TF_STATE_BUCKET: ${{ secrets.TF_STATE_BUCKET || vars.TF_STATE_BUCKET }}
       AWS_DEPLOY_ROLE_ARN: ${{ secrets.AWS_DEPLOY_ROLE_ARN || vars.AWS_DEPLOY_ROLE_ARN }}
+      ALB_CERTIFICATE_ARN: ${{ secrets.ALB_CERTIFICATE_ARN }}
+      API_PUBLIC_HOSTNAME: ${{ vars.API_PUBLIC_HOSTNAME }}
     defaults:
       run:
         working-directory: deploy/terraform/aws
@@ -65,7 +67,17 @@ jobs:
 
       - name: Terraform destroy
         run: |
+          set -euo pipefail
+          EXTRA_TF_VARS=()
+          if [ -n "${ALB_CERTIFICATE_ARN:-}" ] && [ -n "${API_PUBLIC_HOSTNAME:-}" ]; then
+            EXTRA_TF_VARS+=(
+              -var="alb_https_enabled=true"
+              -var="alb_certificate_arn=${ALB_CERTIFICATE_ARN}"
+              -var="api_public_hostname=${API_PUBLIC_HOSTNAME}"
+            )
+          fi
           terraform destroy -auto-approve -input=false \
             -var="aws_region=${{ inputs.aws_region }}" \
             -var="project_name=${{ inputs.project_name }}" \
-            -var="lambda_package=$GITHUB_WORKSPACE/dist/lambda.zip"
+            -var="lambda_package=$GITHUB_WORKSPACE/dist/lambda.zip" \
+            "${EXTRA_TF_VARS[@]}"
