@@ -24,6 +24,7 @@ export default defineConfig({
         "src/wizardDiff.ts",
         "src/presetApi.ts",
         "src/PresetDiffTable.tsx",
+        "src/fetchUtils.ts",
       ],
       thresholds: {
         lines: 80,

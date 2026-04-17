@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { Framework, SecurityRecommendation, WizardState } from "./api";
 import { emptyWizardState, preview, securityRecommendations } from "./api";
+import { errorMessageFromUnknown } from "./fetchUtils";
 import { PresetDiffTable } from "./PresetDiffTable";
 import { getPresetWizard, listPresets, type PresetSummary } from "./presetApi";
 import { useWizardUndoState } from "./useWizardUndoState";
@@ -31,15 +32,27 @@ export function App() {
   useEffect(() => {
     let cancelled = false;
     void (async () => {
-      try {
-        const list = await listPresets();
-        if (!cancelled) {
-          setPresets(list);
-          setPresetListErr(null);
-        }
-      } catch (e) {
-        if (!cancelled) {
-          setPresetListErr(String(e));
+      for (let attempt = 0; attempt < 2; attempt++) {
+        try {
+          if (attempt > 0 && !cancelled) {
+            await new Promise((r) => setTimeout(r, 750));
+          }
+          const list = await listPresets();
+          if (!cancelled) {
+            setPresets(list);
+            setPresetListErr(null);
+          }
+          return;
+        } catch (e) {
+          const msg = errorMessageFromUnknown(e);
+          const transient = /502|503|504|Bad Gateway|Gateway Timeout|timeout/i.test(msg);
+          if (attempt === 0 && transient && !cancelled) {
+            continue;
+          }
+          if (!cancelled) {
+            setPresetListErr(msg);
+          }
+          return;
         }
       }
     })();
@@ -76,7 +89,7 @@ export function App() {
       const recs = await securityRecommendations(state);
       setHints(recs);
     } catch (e) {
-      setErr(String(e));
+      setErr(errorMessageFromUnknown(e));
     }
   }, [state, readyForPreview]);
 
@@ -120,7 +133,13 @@ export function App() {
               disabled={presets.length === 0}
               aria-label="Saved preset for comparison"
             >
-              <option value="">{presets.length === 0 ? "No presets in API" : "Select a preset…"}</option>
+              <option value="">
+                {presetListErr
+                  ? "Could not load presets"
+                  : presets.length === 0
+                    ? "No presets in API"
+                    : "Select a preset…"}
+              </option>
               {presets.map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.name}
@@ -141,7 +160,7 @@ export function App() {
                     setDiffBaseline(w);
                     setDiffBaselineName(meta?.name ?? selectedPresetId);
                   } catch (e) {
-                    setPresetCompareErr(String(e));
+                    setPresetCompareErr(errorMessageFromUnknown(e));
                   } finally {
                     setCompareLoading(false);
                   }
