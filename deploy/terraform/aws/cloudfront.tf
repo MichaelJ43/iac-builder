@@ -6,12 +6,18 @@ locals {
   # depends_on must be a static list (no concat). Referencing the listener here ties
   # CloudFront updates to listener creation. Use length() so https[0] is never indexed when count=0.
   cloudfront_listener_dep_id = length(aws_lb_listener.https) > 0 ? aws_lb_listener.https[0].id : aws_lb_listener.http.id
+  # AWS limits distribution comment to 128 chars; listener id is a long ARN.
+  cloudfront_comment = substr(
+    "${var.project_name} UI + API (${substr(sha256(local.cloudfront_listener_dep_id), 0, 16)})",
+    0,
+    128,
+  )
 }
 
 resource "aws_cloudfront_distribution" "app" {
   enabled             = true
   is_ipv6_enabled     = true
-  comment             = "${var.project_name} UI + API (${local.cloudfront_listener_dep_id})"
+  comment             = local.cloudfront_comment
   default_root_object = "index.html"
   price_class         = var.cloudfront_price_class
 
