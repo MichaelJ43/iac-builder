@@ -27,6 +27,29 @@ Or individually:
 - `cd src/ui && npm ci && npm run test:unit` (and `npm run test:unit:coverage` when checking coverage thresholds)
 - `cd test/ui && npm ci && npx playwright install chromium && npm test` (set `CI=true` for non-interactive).
 
+## Test coverage expectations
+
+These rules apply to **new or materially changed** behavior (not drive-by refactors of unrelated code).
+
+### Go (`src/api`)
+
+- Aim for **at least 80% statement coverage** on each **package you modify** (same module subtree). Run, for example:  
+  `cd src/api && GOSUMDB=off go test ./internal/<pkg> -cover`  
+  and add focused table-driven tests until the package meets the bar. If a change is trivially exercised only through another package, note that in the PR description.
+
+### HTTP component tests (`test/component`)
+
+- When you change **HTTP routes, handlers, status codes, or JSON shapes** exposed under `/api/v1/`, extend the black-box tests in [`test/component`](test/component) so the new or updated behavior is asserted end-to-end against a running server (or the same harness the package tests use).
+
+### UI (`src/ui`)
+
+- For **new or updated** TypeScript/React under [`src/ui/src`](src/ui/src), keep **at least 80% line coverage** on the **files you touch**, using Vitest from [`test/unit/ui`](test/unit/ui) (`npm test -- --coverage` when coverage is configured there).
+- Add **Vitest + React Testing Library** tests for **user-visible** behavior of those features (treat these as UI component tests). Pure helpers can rely on unit tests only; interactive flows should use RTL (`render`, `userEvent`, `waitFor`, etc.) as appropriate.
+
+### Playwright (`test/ui`)
+
+- Use for **critical smoke / cross-browser** journeys; not every small UI tweak requires a new Playwright spec if RTL already covers the behavior.
+
 ## Semver and releases
 
 - The canonical semantic version lives in the repo-root **[`VERSION`](VERSION)** file (e.g. `0.1.0`).

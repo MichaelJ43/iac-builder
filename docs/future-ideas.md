@@ -2,38 +2,56 @@
 
 This document captures **post-MVP** directions. For current behavior, see the root [`README.md`](../README.md).
 
-## Authentication and multi-user
+Items are ordered by **recommended delivery priority** for this repository (impact on the guided wizard, feasibility, and dependencies). Revisit the order when product goals shift.
 
-Full login (OIDC: Auth0, Cognito, Azure AD), per-user encrypted vaults, sessions, and rate limits for a hosted service.
+## Priority overview
 
-## Cloud onboarding
+| Priority | Theme | Summary |
+|----------|--------|--------|
+| **P1** | UX | Undo/redo, diffs vs preset, optional AI assist behind strict policy |
+| **P2** | Security depth | Least-privilege IAM hints, org guardrails, CIS-style toggles, secrets manager integration |
+| **P3** | Wizard presets and catalogs | Shareable presets, import/export, versioning, quick-builder stack catalog (API presets exist; UI and workflows still thin) |
+| **P4** | More IaC frameworks and deeper emitters | Full CloudFormation, Pulumi, Bicep, CDK emitters; OpenTofu notes; Crossplane compositions |
+| **P5** | Authentication and multi-user | OIDC (Auth0, Cognito, Azure AD), per-user encrypted vaults, sessions, rate limits for a hosted service |
+| **P6** | Cloud onboarding | SSO, assumed roles, workload identity from CI, Azure Managed Identity for the app tier |
+| **P7** | More cloud providers | GCP, OCI, and others behind the same discovery abstraction used for AWS today |
+| **P8** | Non-cloud and hybrid | Kubernetes packaging, on-prem Ansible, VMware — prioritize if targeting platform or SRE roles |
+| **P9** | Operations | Hosted SaaS posture, opt-in telemetry, multi-region API deployments |
 
-SSO, assumed roles, workload identity from CI, and Azure Managed Identity for the application tier.
+---
 
-## More cloud providers
-
-GCP, OCI, and others behind the same discovery abstraction used for AWS today.
-
-## Non-cloud and hybrid
-
-Kubernetes workload packaging, on-prem Ansible, VMware — prioritize if targeting platform or SRE roles.
-
-## More IaC frameworks and deeper emitters
-
-Complete emitters for CloudFormation, Pulumi, Bicep, and CDK beyond the MVP vertical slice; OpenTofu compatibility notes; Crossplane compositions.
-
-## Security depth
-
-Auto-generated least-privilege IAM policies, organization guardrails, CIS toggles, and integration with secrets managers.
-
-## Wizard presets and catalogs
-
-Shareable preset libraries, import/export, versioning, and a **quick-builder** catalog of popular application stacks.
-
-## UX
+## P1 — UX
 
 Undo history, diffs between preset and current state, optional AI assist with strict policy controls.
 
-## Operations
+## P2 — Security depth
+
+Auto-generated least-privilege IAM policies, organization guardrails, CIS toggles, and integration with secrets managers.
+
+## P3 — Wizard presets and catalogs
+
+Shareable preset libraries, import/export, versioning, and a **quick-builder** catalog of popular application stacks.
+
+## P4 — More IaC frameworks and deeper emitters
+
+Complete emitters for CloudFormation, Pulumi, Bicep, and CDK beyond the MVP vertical slice; OpenTofu compatibility notes; Crossplane compositions.
+
+## P5 — Authentication and multi-user
+
+Full login (OIDC: Auth0, Cognito, Azure AD), per-user encrypted vaults, sessions, and rate limits for a hosted service.
+
+## P6 — Cloud onboarding
+
+SSO, assumed roles, workload identity from CI, and Azure Managed Identity for the application tier.
+
+## P7 — More cloud providers
+
+GCP, OCI, and others behind the same discovery abstraction used for AWS today.
+
+## P8 — Non-cloud and hybrid
+
+Kubernetes workload packaging, on-prem Ansible, VMware — prioritize if targeting platform or SRE roles.
+
+## P9 — Operations
 
 Hosted SaaS, telemetry (opt-in), multi-region API deployments.
