@@ -36,8 +36,8 @@ export function App() {
   const canShowCloud = state.framework !== "";
   const canShowRegion = canShowCloud;
   const canShowNetwork = state.region.trim() !== "";
-  const canShowCompute =
-    state.subnet_id.trim() !== "" && state.vpc_id.trim() !== "";
+  // Subnet is required for this EC2 template; VPC is optional (only used in Terraform comments / hints).
+  const canShowCompute = state.subnet_id.trim() !== "";
 
   const readyForPreview =
     state.framework &&
@@ -82,6 +82,12 @@ export function App() {
       <div className="main">
         <h1>iac-builder</h1>
         <p>Guided IaC for AWS EC2 (MVP). Pick a framework first.</p>
+        <p className="help">
+          This flow targets a single <code>aws_instance</code> (or equivalent) in one region.{" "}
+          <strong>Subnet</strong> is required so the instance has a network placement.{" "}
+          <strong>VPC</strong> is optional here—Terraform still works without it; we only use it for
+          comments and discovery context. Other resource types would skip subnet entirely; this MVP is EC2-only.
+        </p>
         {err && <p style={{ color: "crimson" }}>{err}</p>}
 
         <div className="step">
@@ -127,19 +133,28 @@ export function App() {
         {canShowNetwork && (
           <>
             <div className="step">
-              <label>VPC ID (context)</label>
-              <input
-                value={state.vpc_id}
-                onChange={(e) => setState((s) => ({ ...s, vpc_id: e.target.value }))}
-                placeholder="vpc-..."
-              />
-            </div>
-            <div className="step">
               <label>Subnet ID</label>
+              <p className="help">
+                Required for EC2: the subnet must live in <strong>{state.region || "your region"}</strong>.
+                Example shape: <code>subnet-0abc123def4567890</code>. From AWS Console: VPC → Subnets → copy subnet ID.
+                If you use a credential profile in the API, you can list subnets after validating the profile.
+              </p>
               <input
                 value={state.subnet_id}
                 onChange={(e) => setState((s) => ({ ...s, subnet_id: e.target.value }))}
                 placeholder="subnet-..."
+              />
+            </div>
+            <div className="step">
+              <label>VPC ID (optional)</label>
+              <p className="help">
+                Optional. Adds a comment in generated Terraform linking the subnet to a VPC for humans
+                reviewing the file—not required for <code>terraform apply</code> when <code>subnet_id</code> is set.
+              </p>
+              <input
+                value={state.vpc_id}
+                onChange={(e) => setState((s) => ({ ...s, vpc_id: e.target.value }))}
+                placeholder="vpc-... (optional)"
               />
             </div>
           </>
