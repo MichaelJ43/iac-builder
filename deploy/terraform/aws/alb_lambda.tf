@@ -3,13 +3,6 @@ resource "aws_security_group" "alb" {
   description = var.alb_https_enabled ? "ALB ingress: HTTP redirect + HTTPS for app" : "ALB ingress for CloudFront origin (HTTP)"
   vpc_id      = data.aws_vpc.default.id
 
-  lifecycle {
-    precondition {
-      condition     = !var.alb_https_enabled || (var.alb_certificate_arn != "" && var.api_public_hostname != "")
-      error_message = "When alb_https_enabled is true, set alb_certificate_arn (ACM in the ALB region) and api_public_hostname (FQDN on that certificate, CNAME to the ALB)."
-    }
-  }
-
   ingress {
     description = var.alb_https_enabled ? "HTTP from internet (301 redirect to HTTPS)" : "HTTP from internet (CloudFront origin)"
     from_port   = 80
@@ -38,6 +31,10 @@ resource "aws_security_group" "alb" {
 
   lifecycle {
     create_before_destroy = true
+    precondition {
+      condition     = !var.alb_https_enabled || (var.alb_certificate_arn != "" && var.api_public_hostname != "")
+      error_message = "When alb_https_enabled is true, set alb_certificate_arn (ACM in the ALB region) and api_public_hostname (FQDN on that certificate, CNAME to the ALB)."
+    }
   }
 }
 
