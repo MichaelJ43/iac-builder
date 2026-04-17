@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import type { Framework, WizardState } from "./api";
+import type { Framework, SecurityRecommendation, WizardState } from "./api";
 import { emptyWizardState, preview, securityRecommendations } from "./api";
 import { PresetDiffTable } from "./PresetDiffTable";
 import { getPresetWizard, listPresets, type PresetSummary } from "./presetApi";
@@ -17,7 +17,7 @@ export function App() {
   const { state, setWizard: setState, undo, redo, canUndo, canRedo } = useWizardUndoState(emptyWizardState());
   const [sliderOpen, setSliderOpen] = useState(false);
   const [previewText, setPreviewText] = useState("");
-  const [hints, setHints] = useState<string[]>([]);
+  const [hints, setHints] = useState<SecurityRecommendation[]>([]);
   const [err, setErr] = useState<string | null>(null);
 
   const [presets, setPresets] = useState<PresetSummary[]>([]);
@@ -74,7 +74,7 @@ export function App() {
       const primary = files["main.tf"] ?? files["template.yaml"] ?? Object.values(files)[0] ?? "";
       setPreviewText(primary);
       const recs = await securityRecommendations(state);
-      setHints(recs.map((r) => `[${r.severity}] ${r.message}`));
+      setHints(recs);
     } catch (e) {
       setErr(String(e));
     }
@@ -337,9 +337,23 @@ export function App() {
         {hints.length > 0 && (
           <div className="hints">
             <strong>Security hints</strong>
-            <ul>
+            <ul className="hints-list">
               {hints.map((h) => (
-                <li key={h}>{h}</li>
+                <li key={h.id} className={`hints-item hints-item--${h.severity}`}>
+                  <div className="hints-item__title">
+                    <span className="hints-item__severity">{h.severity}</span>
+                    {h.message}
+                  </div>
+                  {h.tags && h.tags.length > 0 && (
+                    <div className="hints-item__tags">{h.tags.join(" · ")}</div>
+                  )}
+                  {h.remediation && (
+                    <details className="hints-item__remediation">
+                      <summary>Remediation</summary>
+                      <pre>{h.remediation}</pre>
+                    </details>
+                  )}
+                </li>
               ))}
             </ul>
           </div>

@@ -8,8 +8,8 @@ Items are ordered by **recommended delivery priority** for this repository (impa
 
 | Priority | Theme | Summary |
 |----------|--------|--------|
-| **P1** | UX | Diffs between a saved preset and the live wizard; optional AI assist behind strict policy |
-| **P2** | Security depth | Least-privilege IAM hints, org guardrails, CIS-style toggles, secrets manager integration |
+| **P1** | UX | Optional AI assist behind strict policy (undo/redo and preset diff are shipped) |
+| **P2** | Security depth | Org guardrails, deeper CIS automation, secrets manager **integrations** (starter hints + IAM JSON in API are shipped) |
 | **P3** | Wizard presets and catalogs | Shareable presets, import/export, versioning, quick-builder stack catalog (API presets exist; UI and workflows still thin) |
 | **P4** | More IaC frameworks and deeper emitters | Full CloudFormation, Pulumi, Bicep, CDK emitters; OpenTofu notes; Crossplane compositions |
 | **P5** | Authentication and multi-user | OIDC (Auth0, Cognito, Azure AD), per-user encrypted vaults, sessions, rate limits for a hosted service |
@@ -22,11 +22,13 @@ Items are ordered by **recommended delivery priority** for this repository (impa
 
 ## P1 — UX
 
-Show how the live wizard diverges from a **saved preset baseline** (read-only comparison). Optional AI assist with strict policy controls.
+Optional AI assist with strict policy controls.
 
 ## P2 — Security depth
 
-Auto-generated least-privilege IAM policies, organization guardrails, CIS toggles, and integration with secrets managers.
+Shipped: richer `/api/v1/security/recommendations` (CIS-style tags, remediations, broad SSH CIDR checks, missing security groups, key-pair guidance, starter IAM policy JSON for instance roles).
+
+Still to build: organization-wide guardrails, automated CIS baselines beyond hints, and first-class integrations with AWS Secrets Manager and similar services.
 
 ## P3 — Wizard presets and catalogs
 
