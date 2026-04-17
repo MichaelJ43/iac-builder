@@ -43,7 +43,7 @@ These rules apply to **new or materially changed** behavior (not drive-by refact
 
 ### UI (`src/ui`)
 
-- For **new or updated** TypeScript/React under [`src/ui/src`](src/ui/src), keep **at least 80% line coverage** on the **files you touch**, using Vitest from [`test/unit/ui`](test/unit/ui) (`npm test -- --coverage` when coverage is configured there).
+- For **new or updated** TypeScript/React under [`src/ui/src`](src/ui/src), keep **at least 80% line coverage** on the **files you touch**, using Vitest from [`src/ui`](src/ui) (`npm run test:unit:coverage`; specs live under [`test/unit/ui`](test/unit/ui)).
 - Add **Vitest + React Testing Library** tests for **user-visible** behavior of those features (treat these as UI component tests). Pure helpers can rely on unit tests only; interactive flows should use RTL (`render`, `userEvent`, `waitFor`, etc.) as appropriate.
 
 ### Playwright (`test/ui`)
