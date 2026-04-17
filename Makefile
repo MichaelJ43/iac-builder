@@ -2,5 +2,5 @@
 test:
 	cd src/api && GOSUMDB=off go test ./...
 	cd test/component && GOSUMDB=off go test ./...
-	cd test/unit/ui && npm ci && npm test
+	cd src/ui && npm ci && npm run test:unit
 	cd test/ui && npm ci && npx playwright install chromium && CI=true npm test
