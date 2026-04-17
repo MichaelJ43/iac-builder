@@ -62,15 +62,21 @@ export async function preview(state: WizardState): Promise<Record<string, string
   return data.files;
 }
 
-export async function securityRecommendations(
-  state: WizardState
-): Promise<{ id: string; severity: string; message: string }[]> {
+export type SecurityRecommendation = {
+  id: string;
+  severity: string;
+  message: string;
+  remediation?: string;
+  tags?: string[];
+};
+
+export async function securityRecommendations(state: WizardState): Promise<SecurityRecommendation[]> {
   const res = await fetch(`${base}/api/v1/security/recommendations`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ state }),
   });
   if (!res.ok) throw new Error(await res.text());
-  const data = (await res.json()) as { recommendations: { id: string; severity: string; message: string }[] };
+  const data = (await res.json()) as { recommendations: SecurityRecommendation[] };
   return data.recommendations;
 }
