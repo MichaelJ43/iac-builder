@@ -28,7 +28,7 @@ Items are ordered by **recommended delivery priority** for this repository (impa
 
 ## P2 — Security depth
 
-Shipped: richer `/api/v1/security/recommendations` (CIS-style tags, remediations, broad SSH CIDR checks, missing security groups, key-pair guidance, starter IAM policy JSON for instance roles). When the wizard has a complete compute step (subnet, instance type, AMI), an additional **`secrets-manager-app-runtime`** info hint nudges **application** secrets to AWS Secrets Manager or SSM Parameter Store with least-privilege IAM—complementing the EC2 key-pair and IAM skeleton hints.
+Shipped: richer `/api/v1/security/recommendations` (CIS-style tags, remediations, broad SSH CIDR checks, missing security groups, key-pair guidance, starter IAM policy JSON for instance roles). When the wizard has a complete compute step (subnet, instance type, AMI), an additional **`secrets-manager-app-runtime`** info hint nudges **application** secrets to AWS Secrets Manager or SSM Parameter Store with least-privilege IAM; when the instance has **no public IP**, a **`private-egress-endpoints`** info hint calls out **NAT and/or VPC endpoints** (SSM, S3) so private subnets stay operable.
 
 Still to build: organization-wide guardrails, automated CIS baselines beyond deeper hints, and first-class *automated* integrations (e.g. live Secrets Manager / Parameter Store resource wiring from the app).
 

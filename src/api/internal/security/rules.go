@@ -152,6 +152,17 @@ func Evaluate(s gen.WizardState) []Recommendation {
 		})
 	}
 
+	// P2: no public IP => no direct internet; plan NAT and/or interface endpoints for AWS APIs (SSM, etc.).
+	if wizardLooksReadyForCompute(s) && !s.AssociatePublicIP {
+		out = append(out, Recommendation{
+			ID:          "private-egress-endpoints",
+			Severity:    "info",
+			Message:     "No public IP: the instance cannot reach the internet or AWS service endpoints directly. Plan outbound routing (e.g. NAT gateway in the route table) and/or VPC interface endpoints for the APIs you need (commonly SSM, EC2 Messages, and S3) so updates and SSM work.",
+			Remediation: "Add a 0.0.0.0/0 (or ::/0) default route in the private route table to a NAT gateway, and/or add interface endpoints (com.amazonaws.REGION.ssm, ssmmessages, ec2messages, and a gateway or interface endpoint for S3 as required). In Terraform, model aws_vpc_endpoint and route tables explicitly—do not assume a public IP for patching or SSM.",
+			Tags:        []string{"network", "ssm", "vpc", "cis"},
+		})
+	}
+
 	out = append(out, Recommendation{
 		ID:          "least-privilege-iam",
 		Severity:    "info",
