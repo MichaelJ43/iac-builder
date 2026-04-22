@@ -204,4 +204,14 @@ func TestSecurityRecommendations(t *testing.T) {
 	if secRem == "" || !strings.Contains(secRem, "Terraform") {
 		t.Fatal("expected Terraform guidance in secrets-manager-app-runtime remediation")
 	}
+	var privateEgressRem string
+	for i := range out.Recommendations {
+		if out.Recommendations[i].ID == "private-egress-endpoints" {
+			privateEgressRem = out.Recommendations[i].Remediation
+			break
+		}
+	}
+	if privateEgressRem == "" || !strings.Contains(privateEgressRem, "aws_vpc_endpoint") {
+		t.Fatal("expected aws_vpc_endpoint in private-egress-endpoints remediation (no public IP in payload)")
+	}
 }

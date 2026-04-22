@@ -132,6 +132,59 @@ func TestEvaluate_SecretsManagerAppRuntime_RequiresCompute(t *testing.T) {
 	}
 }
 
+func TestEvaluate_PrivateEgressEndpoints_WhenNoPublicIP(t *testing.T) {
+	s := gen.WizardState{
+		SubnetID:          "subnet-1",
+		InstanceType:      "t3.micro",
+		AMI:               "ami-123",
+		AssociatePublicIP: false,
+	}
+	recs := Evaluate(s)
+	hasID(t, recs, "private-egress-endpoints")
+	var found *Recommendation
+	for i := range recs {
+		if recs[i].ID == "private-egress-endpoints" {
+			found = &recs[i]
+			break
+		}
+	}
+	if found == nil {
+		t.Fatal("expected private-egress-endpoints")
+	}
+	if !strings.Contains(found.Remediation, "Terraform") {
+		t.Fatal("expected Terraform in remediation")
+	}
+}
+
+func TestEvaluate_PrivateEgressEndpoints_AbsentWhenPublicIP(t *testing.T) {
+	s := gen.WizardState{
+		SubnetID:          "subnet-1",
+		InstanceType:      "t3.micro",
+		AMI:               "ami-123",
+		AssociatePublicIP: true,
+	}
+	recs := Evaluate(s)
+	for _, r := range recs {
+		if r.ID == "private-egress-endpoints" {
+			t.Fatal("did not expect private-egress hint with public IP")
+		}
+	}
+}
+
+func TestEvaluate_PrivateEgressEndpoints_RequiresCompleteCompute(t *testing.T) {
+	s := gen.WizardState{
+		SubnetID:     "",
+		InstanceType: "t3.micro",
+		AMI:          "ami-123",
+	}
+	recs := Evaluate(s)
+	for _, r := range recs {
+		if r.ID == "private-egress-endpoints" {
+			t.Fatal("did not expect private-egress without complete compute")
+		}
+	}
+}
+
 func TestEvaluate_LeastPrivilegeIAMHasJSONRemediation(t *testing.T) {
 	recs := Evaluate(gen.WizardState{})
 	var found *Recommendation
