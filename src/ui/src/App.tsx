@@ -1,10 +1,16 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
 import type { Framework, SecurityRecommendation, WizardState } from "./api";
 import { emptyWizardState, preview, securityRecommendations } from "./api";
 import { errorMessageFromUnknown } from "./fetchUtils";
 import { PresetDiffTable } from "./PresetDiffTable";
 import { getPresetWizard, listPresets, type PresetSummary } from "./presetApi";
 import { useWizardUndoState } from "./useWizardUndoState";
+import {
+  buildWizardExport,
+  parseWizardImport,
+  readFileAsText,
+  stringifyExport,
+} from "./wizardExportImport";
 
 const frameworks: { id: Framework; label: string }[] = [
   { id: "terraform", label: "Terraform (HCL)" },
@@ -15,7 +21,10 @@ const frameworks: { id: Framework; label: string }[] = [
 ];
 
 export function App() {
-  const { state, setWizard: setState, undo, redo, canUndo, canRedo } = useWizardUndoState(emptyWizardState());
+  const { state, setWizard: setState, replaceWithState, undo, redo, canUndo, canRedo } =
+    useWizardUndoState(emptyWizardState());
+  const importFileRef = useRef<HTMLInputElement | null>(null);
+  const [importErr, setImportErr] = useState<string | null>(null);
   const [sliderOpen, setSliderOpen] = useState(false);
   const [previewText, setPreviewText] = useState("");
   const [hints, setHints] = useState<SecurityRecommendation[]>([]);
@@ -105,6 +114,39 @@ export function App() {
     [state.security_group_ids]
   );
 
+  const exportConfiguration = useCallback(() => {
+    setImportErr(null);
+    const body = stringifyExport(buildWizardExport(state));
+    const blob = new Blob([body], { type: "application/json" });
+    const a = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    a.href = url;
+    a.download = "iac-builder-wizard.json";
+    a.click();
+    URL.revokeObjectURL(url);
+  }, [state]);
+
+  const onImportFileChange = useCallback(
+    (e: ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      e.target.value = "";
+      if (!file) {
+        return;
+      }
+      setImportErr(null);
+      void (async () => {
+        try {
+          const text = await readFileAsText(file);
+          const next = parseWizardImport(text);
+          replaceWithState(next);
+        } catch (err) {
+          setImportErr(errorMessageFromUnknown(err));
+        }
+      })();
+    },
+    [replaceWithState]
+  );
+
   return (
     <div className={`layout${sliderOpen ? " layout--sliderOpen" : ""}`}>
       <div className="main">
@@ -117,7 +159,28 @@ export function App() {
           <button type="button" className="toolbar-btn" onClick={redo} disabled={!canRedo}>
             Redo
           </button>
+          <button type="button" className="toolbar-btn" onClick={exportConfiguration}>
+            Export configuration
+          </button>
+          <input
+            id="wizard-import-file"
+            ref={importFileRef}
+            type="file"
+            accept="application/json,.json"
+            className="visually-hidden"
+            onChange={onImportFileChange}
+            tabIndex={-1}
+          />
+          <button
+            type="button"
+            className="toolbar-btn"
+            onClick={() => importFileRef.current?.click()}
+            aria-label="Import configuration from a JSON file on your device"
+          >
+            Import configuration
+          </button>
         </div>
+        {importErr && <p className="message--error">{importErr}</p>}
 
         <div className="step preset-compare">
           <label>Compare wizard to saved preset</label>

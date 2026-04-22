@@ -50,6 +50,7 @@ All tokens are defined on `:root` in `styles.css` with the prefix `--ib-` (short
 | Security hints | `hints` + `hints-item--warning` / `hints-item--info` | Warnings feel urgent; info is calmer. |
 | Inline error | `message--error` | For API or validation errors, not for help text. |
 | Code panel | `slider`, `slider-tab` | The tab is vertical on the right edge; `aria-expanded` on the control. |
+| Config import/export | `wizard-toolbar` (Export / Import) | File pick is visually hidden; the Import button is keyboard-accessible and labeled; failures use `message--error`. |
 
 ## Color philosophy
 

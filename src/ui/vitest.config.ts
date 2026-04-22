@@ -23,6 +23,7 @@ export default defineConfig({
         "src/useWizardUndoState.ts",
         "src/wizardDiff.ts",
         "src/presetApi.ts",
+        "src/wizardExportImport.ts",
         "src/PresetDiffTable.tsx",
         "src/fetchUtils.ts",
       ],

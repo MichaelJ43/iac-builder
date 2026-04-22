@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "app": "iac-builder",
+  "exportedAt": "2026-01-01T00:00:00.000Z",
+  "state": {
+    "framework": "terraform",
+    "cloud": "aws",
+    "region": "us-east-1",
+    "vpc_id": "",
+    "subnet_id": "subnet-test123",
+    "instance_type": "t3.micro",
+    "ami": "ami-test",
+    "key_name": "",
+    "security_group_ids": [],
+    "associate_public_ip": false,
+    "imdsv2_required": false,
+    "ssh_cidr": "",
+    "enable_ebs_encryption": false
+  }
+}
