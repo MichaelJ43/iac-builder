@@ -95,6 +95,43 @@ func TestEvaluate_KeyPairHint(t *testing.T) {
 	hasID(t, recs, "ec2-keypair-long-lived")
 }
 
+func TestEvaluate_SecretsManagerAppRuntime_WhenComputeReady(t *testing.T) {
+	s := gen.WizardState{
+		SubnetID:     "subnet-1",
+		InstanceType: "t3.micro",
+		AMI:          "ami-123",
+	}
+	recs := Evaluate(s)
+	hasID(t, recs, "secrets-manager-app-runtime")
+	var found *Recommendation
+	for i := range recs {
+		if recs[i].ID == "secrets-manager-app-runtime" {
+			found = &recs[i]
+			break
+		}
+	}
+	if found == nil {
+		t.Fatal("expected secrets-manager recommendation struct")
+	}
+	if !strings.Contains(found.Remediation, "secretsmanager") {
+		t.Fatal("expected Secrets Manager in remediation")
+	}
+}
+
+func TestEvaluate_SecretsManagerAppRuntime_RequiresCompute(t *testing.T) {
+	s := gen.WizardState{
+		SubnetID:     "",
+		InstanceType: "t3.micro",
+		AMI:          "ami-123",
+	}
+	recs := Evaluate(s)
+	for _, r := range recs {
+		if r.ID == "secrets-manager-app-runtime" {
+			t.Fatal("did not expect secrets-manager hint without subnet/complete compute")
+		}
+	}
+}
+
 func TestEvaluate_LeastPrivilegeIAMHasJSONRemediation(t *testing.T) {
 	recs := Evaluate(gen.WizardState{})
 	var found *Recommendation
