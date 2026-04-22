@@ -12,6 +12,8 @@ import {
   stringifyExport,
 } from "./wizardExportImport";
 import { getStarterTemplate, STARTER_TEMPLATES } from "./starterCatalog";
+import { AiAssistPanel } from "./AiAssistPanel";
+import { isAiAssistUIEnabled } from "./flags";
 
 const frameworks: { id: Framework; label: string }[] = [
   { id: "terraform", label: "Terraform (HCL)" },
@@ -486,6 +488,8 @@ export function App() {
             </ul>
           </div>
         )}
+
+        {isAiAssistUIEnabled() && <AiAssistPanel state={state} />}
       </div>
 
       <button

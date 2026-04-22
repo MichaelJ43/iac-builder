@@ -42,3 +42,12 @@ test("bundled starter template loads into the form", async ({ page }) => {
   await expect(page.getByPlaceholder("us-east-1")).toHaveValue("us-east-1");
   await expect(page.getByPlaceholder("subnet-...")).toHaveValue("subnet-0replace00000000");
 });
+
+test("AI assist policy panel is available when build flag is on", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: /show optional AI assist/i }).click();
+  await expect(
+    page.getByRole("region", { name: "AI assist policy and context" })
+  ).toBeVisible();
+  await expect(page.getByRole("button", { name: "Get AI suggestions" })).toBeDisabled();
+});

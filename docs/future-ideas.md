@@ -22,7 +22,9 @@ Items are ordered by **recommended delivery priority** for this repository (impa
 
 ## P1 — UX
 
-Optional AI assist with strict policy controls.
+**Shipped in-tree:** build-flagged optional AI assist **policy** surface + JSON context preview only (`VITE_IAC_AI_ASSIST`, see [`docs/ai-assist.md`](ai-assist.md)); no model calls by default. Undo/redo and preset diff also shipped (see table).
+
+**Still to build:** a provider integration behind explicit user action, rate limits, and product policy review.
 
 ## P2 — Security depth
 
