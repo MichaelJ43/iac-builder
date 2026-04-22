@@ -1,6 +1,8 @@
 name: Deploy AWS (S3 + CloudFront + ALB + Lambda)
 
 on:
+  push:
+    branches: [main]
   workflow_dispatch:
     inputs:
       aws_region:
@@ -15,12 +17,23 @@ on:
 permissions:
   id-token: write
   contents: read
+  deployments: write
+
+concurrency:
+  group: deploy-aws-main
+  cancel-in-progress: false
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    # Registers each run as a GitHub "Deployment" (Environments + commit/deployments graph).
+    environment:
+      name: production
+      url: ${{ steps.app_deployment_url.outputs.url }}
     env:
-      AWS_REGION: ${{ inputs.aws_region }}
+      # workflow_dispatch: use inputs. push: defaults match workflow_dispatch defaults.
+      AWS_REGION: ${{ github.event.inputs.aws_region || 'us-east-1' }}
+      PROJECT_NAME: ${{ github.event.inputs.project_name || 'iac-builder' }}
       TF_IN_AUTOMATION: "true"
       # Repository Variables or Secrets (same names). Secrets win if both are set.
       TF_STATE_BUCKET: ${{ secrets.TF_STATE_BUCKET || vars.TF_STATE_BUCKET }}
@@ -67,8 +80,8 @@ jobs:
         run: |
           terraform init -input=false \
             -backend-config="bucket=$TF_STATE_BUCKET" \
-            -backend-config="key=iac-builder/${{ inputs.project_name }}/${{ inputs.aws_region }}/terraform.tfstate" \
-            -backend-config="region=${{ inputs.aws_region }}" \
+            -backend-config="key=iac-builder/${{ env.PROJECT_NAME }}/${{ env.AWS_REGION }}/terraform.tfstate" \
+            -backend-config="region=${{ env.AWS_REGION }}" \
             -backend-config="encrypt=true"
 
       - name: Terraform apply
@@ -86,8 +99,8 @@ jobs:
             )
           fi
           terraform apply -auto-approve -input=false \
-            -var="aws_region=${{ inputs.aws_region }}" \
-            -var="project_name=${{ inputs.project_name }}" \
+            -var="aws_region=${{ env.AWS_REGION }}" \
+            -var="project_name=${{ env.PROJECT_NAME }}" \
             -var="lambda_package=$GITHUB_WORKSPACE/dist/lambda.zip" \
             "${EXTRA_TF_VARS[@]}"
 
@@ -114,6 +127,7 @@ jobs:
           aws cloudfront create-invalidation --distribution-id "$DIST" --paths "/*"
 
       - name: Print app URL
+        id: app_deployment_url
         run: |
           APP_URL="$(terraform output -raw app_url)"
           CF_HOST="$(terraform output -raw cloudfront_domain_name)"
@@ -124,3 +138,5 @@ jobs:
             echo "- App (canonical): ${APP_URL}"
             echo "- CloudFront default host: https://${CF_HOST}"
           } >> "$GITHUB_STEP_SUMMARY"
+          # Surfaces the live URL on the production environment deployment in GitHub.
+          echo "url=${APP_URL}" >> "$GITHUB_OUTPUT"
