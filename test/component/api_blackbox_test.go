@@ -42,13 +42,13 @@ func TestPreview_CloudFormation(t *testing.T) {
 
 	body := map[string]any{
 		"state": map[string]any{
-			"framework":        "cloudformation",
-			"cloud":            "aws",
-			"region":           "us-east-1",
-			"vpc_id":           "vpc-1",
-			"subnet_id":        "subnet-1",
-			"instance_type":    "t3.micro",
-			"ami":              "ami-12345",
+			"framework":          "cloudformation",
+			"cloud":              "aws",
+			"region":             "us-east-1",
+			"vpc_id":             "vpc-1",
+			"subnet_id":          "subnet-1",
+			"instance_type":      "t3.micro",
+			"ami":                "ami-12345",
 			"security_group_ids": []string{"sg-1"},
 		},
 	}
@@ -82,13 +82,13 @@ func TestPreview_Terraform(t *testing.T) {
 
 	body := map[string]any{
 		"state": map[string]any{
-			"framework":       "terraform",
-			"cloud":           "aws",
-			"region":          "us-east-1",
-			"vpc_id":          "vpc-1",
-			"subnet_id":       "subnet-1",
-			"instance_type":   "t3.micro",
-			"ami":             "ami-12345",
+			"framework":          "terraform",
+			"cloud":              "aws",
+			"region":             "us-east-1",
+			"vpc_id":             "vpc-1",
+			"subnet_id":          "subnet-1",
+			"instance_type":      "t3.micro",
+			"ami":                "ami-12345",
 			"security_group_ids": []string{"sg-1"},
 		},
 	}
@@ -130,15 +130,15 @@ func TestSecurityRecommendations(t *testing.T) {
 
 	body := map[string]any{
 		"state": map[string]any{
-			"framework":            "terraform",
-			"cloud":                "aws",
-			"region":               "us-east-1",
-			"subnet_id":            "subnet-1",
-			"instance_type":        "t3.micro",
-			"ami":                  "ami-12345",
-			"ssh_cidr":             "0.0.0.0/0",
-			"security_group_ids":   []string{"sg-1"},
-			"imdsv2_required":      true,
+			"framework":             "terraform",
+			"cloud":                 "aws",
+			"region":                "us-east-1",
+			"subnet_id":             "subnet-1",
+			"instance_type":         "t3.micro",
+			"ami":                   "ami-12345",
+			"ssh_cidr":              "0.0.0.0/0",
+			"security_group_ids":    []string{"sg-1"},
+			"imdsv2_required":       true,
 			"enable_ebs_encryption": true,
 		},
 	}
@@ -193,5 +193,15 @@ func TestSecurityRecommendations(t *testing.T) {
 	}
 	if iamRemediation == "" || !strings.Contains(iamRemediation, "Version") {
 		t.Fatal("expected IAM starter in least-privilege remediation")
+	}
+	var secRem string
+	for i := range out.Recommendations {
+		if out.Recommendations[i].ID == "secrets-manager-app-runtime" {
+			secRem = out.Recommendations[i].Remediation
+			break
+		}
+	}
+	if secRem == "" || !strings.Contains(secRem, "Terraform") {
+		t.Fatal("expected Terraform guidance in secrets-manager-app-runtime remediation")
 	}
 }
