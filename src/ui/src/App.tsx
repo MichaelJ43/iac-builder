@@ -190,7 +190,7 @@ export function App() {
           <strong>VPC</strong> is optional here—Terraform still works without it; we only use it for
           comments and discovery context. Other resource types would skip subnet entirely; this MVP is EC2-only.
         </p>
-        {err && <p style={{ color: "crimson" }}>{err}</p>}
+        {err && <p className="message--error">{err}</p>}
 
         <div className="step">
           <label>IaC framework</label>
