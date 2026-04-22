@@ -1,10 +1,19 @@
 locals {
-  custom_domain_host  = trimspace(var.custom_domain)
-  use_custom_domain     = local.custom_domain_host != "" && trimspace(var.acm_certificate_arn) != ""
+  custom_domain_host = trimspace(var.custom_domain)
+  use_custom_domain  = local.custom_domain_host != "" && trimspace(var.acm_certificate_arn) != ""
+  # With a browser site certificate (custom_domain + acm), use the same ACM on the ALB and pin the API
+  # origin to api.<custom_domain> (must be on the cert, e.g. a wildcard for *.custom_domain or explicit SAN).
+  api_public_hostname_effective = local.use_custom_domain ? "api.${local.custom_domain_host}" : trimspace(var.api_public_hostname)
+  alb_certificate_arn_effective = local.use_custom_domain ? trimspace(var.acm_certificate_arn) : trimspace(var.alb_certificate_arn)
+  # Legacy: explicit alb_https_enabled + alb_certificate_arn + api_public_hostname without CloudFront custom domain.
+  alb_https_enabled_effective = local.use_custom_domain || (
+    var.alb_https_enabled && trimspace(var.alb_certificate_arn) != "" && trimspace(var.api_public_hostname) != ""
+  )
+  api_fqdn_for_r53 = "api.${local.custom_domain_host}"
   # CloudFront must use a hostname present on the origin certificate when using HTTPS.
   # The default ALB DNS name cannot use a typical ACM cert, so we use api_public_hostname when TLS is on.
-  cloudfront_api_origin_domain   = var.alb_https_enabled ? var.api_public_hostname : aws_lb.api.dns_name
-  cloudfront_api_origin_protocol = var.alb_https_enabled ? "https-only" : "http-only"
+  cloudfront_api_origin_domain   = local.alb_https_enabled_effective ? local.api_public_hostname_effective : aws_lb.api.dns_name
+  cloudfront_api_origin_protocol = local.alb_https_enabled_effective ? "https-only" : "http-only"
   # depends_on must be a static list (no concat). Referencing the listener here ties
   # CloudFront updates to listener creation. Use length() so https[0] is never indexed when count=0.
   cloudfront_listener_dep_id = length(aws_lb_listener.https) > 0 ? aws_lb_listener.https[0].id : aws_lb_listener.http.id

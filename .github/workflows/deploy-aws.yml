@@ -25,7 +25,8 @@ jobs:
       # Repository Variables or Secrets (same names). Secrets win if both are set.
       TF_STATE_BUCKET: ${{ secrets.TF_STATE_BUCKET || vars.TF_STATE_BUCKET }}
       AWS_DEPLOY_ROLE_ARN: ${{ secrets.AWS_DEPLOY_ROLE_ARN || vars.AWS_DEPLOY_ROLE_ARN }}
-      # Optional ALB HTTPS (see docs/aws-setup-walkthrough.md §6b). When both are set, workflows pass -var to Terraform.
+      # Optional legacy ALB HTTPS without CloudFront custom domain (see docs/aws-setup-walkthrough.md §6b). When
+      # TF_CUSTOM_DOMAIN + TF_ACM_CERTIFICATE_ARN are set, Terraform uses api.<custom_domain> and the same ACM on the ALB; leave these empty.
       ALB_CERTIFICATE_ARN: ${{ secrets.ALB_CERTIFICATE_ARN }}
       API_PUBLIC_HOSTNAME: ${{ vars.API_PUBLIC_HOSTNAME }}
       # Optional CloudFront custom domain: TF_CUSTOM_DOMAIN (Variable) + TF_ACM_CERTIFICATE_ARN + optional TF_ROUTE53_HOSTED_ZONE_ID (Secrets). Export only when set so empty strings are not passed as TF_VARs.

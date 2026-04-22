@@ -24,13 +24,13 @@ output "alb_dns_name" {
 }
 
 output "alb_https_enabled" {
-  description = "Whether the ALB terminates TLS on 443 and CloudFront uses HTTPS to the API origin."
-  value       = var.alb_https_enabled
+  description = "Whether the ALB terminates TLS on 443 and CloudFront uses HTTPS to the API origin (includes custom_domain + acm or legacy alb_https_enabled)."
+  value       = local.alb_https_enabled_effective
 }
 
 output "api_public_hostname" {
-  description = "When ALB HTTPS is enabled, the FQDN used as the CloudFront API origin (CNAME this to alb_dns_name). Empty otherwise."
-  value       = var.alb_https_enabled ? var.api_public_hostname : ""
+  description = "When ALB TLS is on: FQDN for the CloudFront API origin. With custom domain + ACM, this is always api.<custom_domain> (point DNS to alb_dns_name). Legacy: var.api_public_hostname when alb_https_enabled."
+  value       = local.alb_https_enabled_effective ? local.api_public_hostname_effective : ""
 }
 
 output "lambda_function_name" {
