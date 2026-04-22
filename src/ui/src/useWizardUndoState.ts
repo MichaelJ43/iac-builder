@@ -17,7 +17,8 @@ type Action =
   | { type: "edit"; updater: (p: WizardState) => WizardState }
   | { type: "flush" }
   | { type: "undo" }
-  | { type: "redo" };
+  | { type: "redo" }
+  | { type: "replace"; next: WizardState };
 
 function reducer(state: WizardHistoryState, action: Action): WizardHistoryState {
   switch (action.type) {
@@ -29,6 +30,8 @@ function reducer(state: WizardHistoryState, action: Action): WizardHistoryState 
       return undoHistory(state);
     case "redo":
       return redoHistory(state);
+    case "replace":
+      return initialWizardHistory(action.next);
   }
 }
 
@@ -73,9 +76,18 @@ export function useWizardUndoState(initial: WizardState) {
     dispatch({ type: "redo" });
   }, [clearFlushTimer]);
 
+  const replaceWithState = useCallback(
+    (next: WizardState) => {
+      clearFlushTimer();
+      dispatch({ type: "replace", next });
+    },
+    [clearFlushTimer]
+  );
+
   return {
     state: state.present,
     setWizard,
+    replaceWithState,
     undo,
     redo,
     canUndo: canUndo(state),

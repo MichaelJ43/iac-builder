@@ -65,4 +65,24 @@ describe("useWizardUndoState", () => {
     });
     expect(result.current.state.region).toBe("");
   });
+
+  it("replaceWithState clears undo/redo and sets present", () => {
+    const { result } = renderHook(() => useWizardUndoState(empty()));
+
+    act(() => {
+      result.current.setWizard((s) => ({ ...s, region: "ap-south-1" }));
+    });
+    act(() => {
+      vi.advanceTimersByTime(350);
+    });
+    expect(result.current.canUndo).toBe(true);
+
+    const next: WizardState = { ...empty(), framework: "pulumi", region: "us-west-1" };
+    act(() => {
+      result.current.replaceWithState(next);
+    });
+    expect(result.current.state).toEqual(next);
+    expect(result.current.canUndo).toBe(false);
+    expect(result.current.canRedo).toBe(false);
+  });
 });
