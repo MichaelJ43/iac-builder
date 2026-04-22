@@ -46,6 +46,10 @@ Then build the UI, `aws s3 sync` to the `ui_bucket_name` output, and create a Cl
 
 The **Deploy AWS** workflow automates build, `terraform apply`, S3 sync, and invalidation.
 
+## Custom domain (optional)
+
+Use an **ACM public certificate in `us-east-1`** (DNS validation) that includes the site hostname, then set repository **Variable** `TF_CUSTOM_DOMAIN` to that FQDN and **Secret** `TF_ACM_CERTIFICATE_ARN` to the cert ARN. Optional **Secret** `TF_ROUTE53_HOSTED_ZONE_ID` lets Terraform create `A`/`AAAA` **alias** records to CloudFront in that zone (the record name is derived: apex in a child zone, or a label under a parent zone). The **Destroy AWS** workflow uses the same three names so destroy matches state. Same-origin `/api` traffic does not require a separate API hostname. Manual `terraform apply` can pass `-var=custom_domain=...` and `-var=acm_certificate_arn=...` (and `route53_hosted_zone_id` if desired).
+
 ## Undeploy
 
 Run the **Destroy AWS** workflow (manual). Type `DELETE` in the `confirm` input. It runs `terraform destroy` for the same state key as deploy.

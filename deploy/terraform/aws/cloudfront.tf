@@ -1,4 +1,6 @@
 locals {
+  custom_domain_host  = trimspace(var.custom_domain)
+  use_custom_domain     = local.custom_domain_host != "" && trimspace(var.acm_certificate_arn) != ""
   # CloudFront must use a hostname present on the origin certificate when using HTTPS.
   # The default ALB DNS name cannot use a typical ACM cert, so we use api_public_hostname when TLS is on.
   cloudfront_api_origin_domain   = var.alb_https_enabled ? var.api_public_hostname : aws_lb.api.dns_name
@@ -20,6 +22,8 @@ resource "aws_cloudfront_distribution" "app" {
   comment             = local.cloudfront_comment
   default_root_object = "index.html"
   price_class         = var.cloudfront_price_class
+
+  aliases = local.use_custom_domain ? [local.custom_domain_host] : []
 
   origin {
     domain_name = aws_s3_bucket.ui.bucket_regional_domain_name
@@ -86,7 +90,9 @@ resource "aws_cloudfront_distribution" "app" {
   }
 
   viewer_certificate {
-    cloudfront_default_certificate = true
+    cloudfront_default_certificate = !local.use_custom_domain
+    acm_certificate_arn            = local.use_custom_domain ? var.acm_certificate_arn : null
+    ssl_support_method             = local.use_custom_domain ? "sni-only" : null
     minimum_protocol_version       = "TLSv1.2_2021"
   }
 
