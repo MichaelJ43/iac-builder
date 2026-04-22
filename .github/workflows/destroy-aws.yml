@@ -27,6 +27,7 @@ jobs:
       TF_IN_AUTOMATION: "true"
       TF_STATE_BUCKET: ${{ secrets.TF_STATE_BUCKET || vars.TF_STATE_BUCKET }}
       AWS_DEPLOY_ROLE_ARN: ${{ secrets.AWS_DEPLOY_ROLE_ARN || vars.AWS_DEPLOY_ROLE_ARN }}
+      # Optional legacy ALB vars when not using custom_domain + acm in Terraform; otherwise leave empty.
       ALB_CERTIFICATE_ARN: ${{ secrets.ALB_CERTIFICATE_ARN }}
       API_PUBLIC_HOSTNAME: ${{ vars.API_PUBLIC_HOSTNAME }}
       TF_ACM_CERTIFICATE_ARN: ${{ secrets.TF_ACM_CERTIFICATE_ARN }}

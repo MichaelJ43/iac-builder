@@ -48,7 +48,13 @@ The **Deploy AWS** workflow automates build, `terraform apply`, S3 sync, and inv
 
 ## Custom domain (optional)
 
-Use an **ACM public certificate in `us-east-1`** (DNS validation) that includes the site hostname, then set repository **Variable** `TF_CUSTOM_DOMAIN` to that FQDN and **Secret** `TF_ACM_CERTIFICATE_ARN` to the cert ARN. Optional **Secret** `TF_ROUTE53_HOSTED_ZONE_ID` lets Terraform create `A`/`AAAA` **alias** records to CloudFront in that zone (the record name is derived: apex in a child zone, or a label under a parent zone). The **Destroy AWS** workflow uses the same three names so destroy matches state. Same-origin `/api` traffic does not require a separate API hostname. Manual `terraform apply` can pass `-var=custom_domain=...` and `-var=acm_certificate_arn=...` (and `route53_hosted_zone_id` if desired).
+Use an **ACM public certificate in `us-east-1`** (DNS validation) that includes the **site hostname** and, for the ALB, **`api.<site>`** (e.g. include `app.example.com` and `*.app.example.com` for `app.example.com`, or a SAN for `api.app.example.com`). Set repository **Variable** `TF_CUSTOM_DOMAIN` to the site FQDN (no `https://`) and **Secret** `TF_ACM_CERTIFICATE_ARN` to that one cert. Terraform will attach it to **CloudFront** and the **ALB** and will use `api.<TF_CUSTOM_DOMAIN>` as the **CloudFront API origin** hostname (HTTPS to the ALB).
+
+Optional **Secret** `TF_ROUTE53_HOSTED_ZONE_ID` creates **A** and **AAAA** in that public zone: one pair alias to **CloudFront** (browser host) and one pair to the **ALB** (`api.<custom_domain>`), with names derived for apex vs. parent-zone layouts as before.
+
+You do **not** need `ALB_CERTIFICATE_ARN` or `API_PUBLIC_HOSTNAME` when using the custom domain path; they remain for **legacy** stacks without a CloudFront custom domain that still want ALB TLS.
+
+The **Destroy AWS** workflow uses the same `TF_*` values so destroy matches state. Manual `terraform apply` can use `-var=custom_domain=...`, `-var=acm_certificate_arn=...`, and `-var=route53_hosted_zone_id=...` (optional).
 
 ## Undeploy
 

@@ -29,13 +29,13 @@ variable "alb_https_enabled" {
 
 variable "alb_certificate_arn" {
   type        = string
-  description = "ACM certificate ARN in the ALB region (e.g. arn:aws:acm:us-east-1:123456789012:certificate/...). Required when alb_https_enabled is true."
+  description = "Legacy: ACM certificate on the ALB (same region as the ALB). When custom_domain + acm_certificate_arn are set, the same public certificate is used automatically and this is ignored for the listener."
   default     = ""
 }
 
 variable "api_public_hostname" {
   type        = string
-  description = "FQDN for the API that resolves to the ALB (CNAME to the ALB DNS name). Must appear on the ACM certificate. Used as the CloudFront origin hostname when alb_https_enabled is true so TLS verification matches the cert."
+  description = "Legacy: FQDN for the API origin (must be on the ALB cert). When custom_domain + acm_certificate_arn are set, the origin is always api.<custom_domain> and this is ignored."
   default     = ""
 }
 
