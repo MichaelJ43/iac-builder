@@ -10,7 +10,8 @@ export default defineConfig({
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
   webServer: [
     {
-      command: "cd ../../src/ui && npm run dev -- --host 127.0.0.1 --port 5173",
+      command:
+        "cd ../../src/ui && VITE_IAC_AI_ASSIST=true npm run dev -- --host 127.0.0.1 --port 5173",
       url: "http://127.0.0.1:5173",
       reuseExistingServer: !process.env.CI,
       timeout: 120_000,
