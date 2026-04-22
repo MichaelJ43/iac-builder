@@ -51,6 +51,7 @@ All tokens are defined on `:root` in `styles.css` with the prefix `--ib-` (short
 | Inline error | `message--error` | For API or validation errors, not for help text. |
 | Code panel | `slider`, `slider-tab` | The tab is vertical on the right edge; `aria-expanded` on the control. |
 | Config import/export | `wizard-toolbar` (Export / Import) | File pick is visually hidden; the Import button is keyboard-accessible and labeled; failures use `message--error`. |
+| Starter catalog | `step.starter-catalog` + `preset-compare__row` | Bundled templates use the same control row as preset compare; a second `help` line explains the active starter. |
 
 ## Color philosophy
 

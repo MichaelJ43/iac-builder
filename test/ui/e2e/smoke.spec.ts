@@ -33,3 +33,12 @@ test("import configuration from JSON fills the wizard", async ({ page }) => {
   await expect(page.getByPlaceholder("us-east-1")).toHaveValue("us-east-1");
   await expect(page.getByPlaceholder("subnet-...")).toHaveValue("subnet-test123");
 });
+
+test("bundled starter template loads into the form", async ({ page }) => {
+  await page.goto("/");
+  await page.getByLabel("Bundled starter template").selectOption("terraform-us-east-1-skeleton");
+  await page.getByRole("button", { name: "Load starter" }).click();
+  await expect(page.getByRole("combobox", { name: "IaC framework" })).toHaveValue("terraform");
+  await expect(page.getByPlaceholder("us-east-1")).toHaveValue("us-east-1");
+  await expect(page.getByPlaceholder("subnet-...")).toHaveValue("subnet-0replace00000000");
+});

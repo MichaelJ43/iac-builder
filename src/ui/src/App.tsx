@@ -11,6 +11,7 @@ import {
   readFileAsText,
   stringifyExport,
 } from "./wizardExportImport";
+import { getStarterTemplate, STARTER_TEMPLATES } from "./starterCatalog";
 
 const frameworks: { id: Framework; label: string }[] = [
   { id: "terraform", label: "Terraform (HCL)" },
@@ -37,6 +38,11 @@ export function App() {
   const [presetCompareErr, setPresetCompareErr] = useState<string | null>(null);
   const [diffBaseline, setDiffBaseline] = useState<WizardState | null>(null);
   const [diffBaselineName, setDiffBaselineName] = useState<string | null>(null);
+  const [selectedStarterId, setSelectedStarterId] = useState("");
+  const selectedStarter = useMemo(
+    () => (selectedStarterId ? getStarterTemplate(selectedStarterId) : undefined),
+    [selectedStarterId]
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -147,6 +153,15 @@ export function App() {
     [replaceWithState]
   );
 
+  const loadStarterTemplate = useCallback(() => {
+    const t = getStarterTemplate(selectedStarterId);
+    if (!t) {
+      return;
+    }
+    setImportErr(null);
+    replaceWithState(structuredClone(t.state));
+  }, [selectedStarterId, replaceWithState]);
+
   return (
     <div className={`layout${sliderOpen ? " layout--sliderOpen" : ""}`}>
       <div className="main">
@@ -181,6 +196,37 @@ export function App() {
           </button>
         </div>
         {importErr && <p className="message--error">{importErr}</p>}
+
+        <div className="step starter-catalog">
+          <label>Starter template (bundled)</label>
+          <p className="help">
+            Load a <strong>curated</strong> example end-to-end. Values use obvious placeholder AWS IDs; replace
+            with real subnet, security group, and AMI in your account before you trust generated IaC in AWS.
+          </p>
+          <div className="preset-compare__row">
+            <select
+              value={selectedStarterId}
+              onChange={(e) => setSelectedStarterId(e.target.value)}
+              aria-label="Bundled starter template"
+            >
+              <option value="">Choose a starter…</option>
+              {STARTER_TEMPLATES.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.name}
+                </option>
+              ))}
+            </select>
+            <button
+              type="button"
+              className="toolbar-btn"
+              disabled={!selectedStarterId}
+              onClick={loadStarterTemplate}
+            >
+              Load starter
+            </button>
+          </div>
+          {selectedStarter && <p className="help">{selectedStarter.description}</p>}
+        </div>
 
         <div className="step preset-compare">
           <label>Compare wizard to saved preset</label>
