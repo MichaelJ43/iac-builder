@@ -1,6 +1,11 @@
 output "cloudfront_domain_name" {
-  description = "HTTPS URL host for the app (same origin for UI and /api)."
+  description = "CloudFront default hostname (d***.cloudfront.net)."
   value       = aws_cloudfront_distribution.app.domain_name
+}
+
+output "app_url" {
+  description = "Public site URL: https://<custom_domain> when configured, else https://<cloudfront_domain_name>."
+  value       = local.use_custom_domain ? "https://${local.custom_domain_host}" : "https://${aws_cloudfront_distribution.app.domain_name}"
 }
 
 output "cloudfront_distribution_id" {
