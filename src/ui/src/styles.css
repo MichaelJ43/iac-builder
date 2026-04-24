@@ -232,9 +232,9 @@ label {
   width: 100%;
   margin-bottom: 0.5rem;
 }
-input:not(.m43-input),
-select:not(.m43-input),
-button:not(.m43-button):not(.slider-tab) {
+.layout input:not(.m43-input),
+.layout select:not(.m43-input),
+.layout button:not(.m43-button):not(.slider-tab) {
   width: 100%;
   padding: 0.5rem;
   margin-bottom: 0.5rem;
