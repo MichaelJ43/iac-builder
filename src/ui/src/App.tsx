@@ -164,19 +164,26 @@ export function App() {
     replaceWithState(structuredClone(t.state));
   }, [selectedStarterId, replaceWithState]);
 
+  const toolbarButtonClass = "toolbar-btn m43-button";
+  const fieldClass = "step m43-field";
+  const inputClass = "m43-input";
+  const errorClass = "message--error m43-message--error";
+
   return (
     <div className={`layout${sliderOpen ? " layout--sliderOpen" : ""}`}>
-      <div className="main">
-        <h1>iac-builder</h1>
-        <p>Guided IaC for AWS EC2 (MVP). Pick a framework first.</p>
+      <main className="main m43-main">
+        <header className="m43-site-header">
+          <h1>iac-builder</h1>
+          <p className="m43-intro">Guided IaC for AWS EC2 (MVP). Pick a framework first.</p>
+        </header>
         <div className="wizard-toolbar">
-          <button type="button" className="toolbar-btn" onClick={undo} disabled={!canUndo}>
+          <button type="button" className={toolbarButtonClass} onClick={undo} disabled={!canUndo}>
             Undo
           </button>
-          <button type="button" className="toolbar-btn" onClick={redo} disabled={!canRedo}>
+          <button type="button" className={toolbarButtonClass} onClick={redo} disabled={!canRedo}>
             Redo
           </button>
-          <button type="button" className="toolbar-btn" onClick={exportConfiguration}>
+          <button type="button" className={toolbarButtonClass} onClick={exportConfiguration}>
             Export configuration
           </button>
           <input
@@ -190,16 +197,16 @@ export function App() {
           />
           <button
             type="button"
-            className="toolbar-btn"
+            className={toolbarButtonClass}
             onClick={() => importFileRef.current?.click()}
             aria-label="Import configuration from a JSON file on your device"
           >
             Import configuration
           </button>
         </div>
-        {importErr && <p className="message--error">{importErr}</p>}
+        {importErr && <p className={errorClass}>{importErr}</p>}
 
-        <div className="step starter-catalog">
+        <div className={`${fieldClass} starter-catalog`}>
           <label>Starter template (bundled)</label>
           <p className="help">
             Load a <strong>curated</strong> example end-to-end. Values use obvious placeholder AWS IDs; replace
@@ -207,6 +214,7 @@ export function App() {
           </p>
           <div className="preset-compare__row">
             <select
+              className={inputClass}
               value={selectedStarterId}
               onChange={(e) => setSelectedStarterId(e.target.value)}
               aria-label="Bundled starter template"
@@ -220,7 +228,7 @@ export function App() {
             </select>
             <button
               type="button"
-              className="toolbar-btn"
+              className={toolbarButtonClass}
               disabled={!selectedStarterId}
               onClick={loadStarterTemplate}
             >
@@ -230,15 +238,16 @@ export function App() {
           {selectedStarter && <p className="help">{selectedStarter.description}</p>}
         </div>
 
-        <div className="step preset-compare">
+        <div className={`${fieldClass} preset-compare`}>
           <label>Compare wizard to saved preset</label>
           <p className="help">
             Pick a preset stored by the API, then <strong>Set baseline</strong>. The table updates as you edit the
             form; it does not change your answers.
           </p>
-          {presetListErr && <p className="preset-compare__err">{presetListErr}</p>}
+          {presetListErr && <p className="preset-compare__err m43-message--error">{presetListErr}</p>}
           <div className="preset-compare__row">
             <select
+              className={inputClass}
               value={selectedPresetId}
               onChange={(e) => setSelectedPresetId(e.target.value)}
               disabled={presets.length === 0}
@@ -259,7 +268,7 @@ export function App() {
             </select>
             <button
               type="button"
-              className="toolbar-btn"
+              className={toolbarButtonClass}
               disabled={!selectedPresetId || compareLoading}
               onClick={() => {
                 void (async () => {
@@ -281,7 +290,7 @@ export function App() {
               {compareLoading ? "Loading…" : "Set baseline"}
             </button>
           </div>
-          {presetCompareErr && <p className="preset-compare__err">{presetCompareErr}</p>}
+          {presetCompareErr && <p className="preset-compare__err m43-message--error">{presetCompareErr}</p>}
           {diffBaseline && diffBaselineName && (
             <PresetDiffTable
               name={diffBaselineName}
@@ -301,11 +310,12 @@ export function App() {
           <strong>VPC</strong> is optional here—Terraform still works without it; we only use it for
           comments and discovery context. Other resource types would skip subnet entirely; this MVP is EC2-only.
         </p>
-        {err && <p className="message--error">{err}</p>}
+        {err && <p className={errorClass}>{err}</p>}
 
-        <div className="step">
+        <div className={fieldClass}>
           <label>IaC framework</label>
           <select
+            className={inputClass}
             aria-label="IaC framework"
             value={state.framework}
             onChange={(e) =>
@@ -322,9 +332,10 @@ export function App() {
         </div>
 
         {canShowCloud && (
-          <div className="step">
+          <div className={fieldClass}>
             <label>Cloud</label>
             <select
+              className={inputClass}
               value={state.cloud}
               onChange={(e) => setState((s) => ({ ...s, cloud: e.target.value }))}
             >
@@ -334,9 +345,10 @@ export function App() {
         )}
 
         {canShowRegion && (
-          <div className="step">
+          <div className={fieldClass}>
             <label>Region</label>
             <input
+              className={inputClass}
               value={state.region}
               onChange={(e) => setState((s) => ({ ...s, region: e.target.value }))}
               placeholder="us-east-1"
@@ -346,7 +358,7 @@ export function App() {
 
         {canShowNetwork && (
           <>
-            <div className="step">
+            <div className={fieldClass}>
               <label>Subnet ID</label>
               <p className="help">
                 Required for EC2: the subnet must live in <strong>{state.region || "your region"}</strong>.
@@ -354,12 +366,13 @@ export function App() {
                 If you use a credential profile in the API, you can list subnets after validating the profile.
               </p>
               <input
+                className={inputClass}
                 value={state.subnet_id}
                 onChange={(e) => setState((s) => ({ ...s, subnet_id: e.target.value }))}
                 placeholder="subnet-..."
               />
             </div>
-            <div className="step">
+            <div className={fieldClass}>
               <label>VPC ID (optional)</label>
               <p className="help">
                 Optional. Adds a comment in generated Terraform linking the subnet to a VPC for humans
@@ -367,6 +380,7 @@ export function App() {
                 If <strong>Show code</strong> is open, it can sit on top of this area—close it or scroll to see this field.
               </p>
               <input
+                className={inputClass}
                 value={state.vpc_id}
                 onChange={(e) => setState((s) => ({ ...s, vpc_id: e.target.value }))}
                 placeholder="vpc-... (optional)"
@@ -377,9 +391,10 @@ export function App() {
 
         {canShowCompute && (
           <>
-            <div className="step">
+            <div className={fieldClass}>
               <label>Instance type</label>
               <input
+                className={inputClass}
                 value={state.instance_type}
                 onChange={(e) =>
                   setState((s) => ({ ...s, instance_type: e.target.value }))
@@ -387,24 +402,27 @@ export function App() {
                 placeholder="t3.micro"
               />
             </div>
-            <div className="step">
+            <div className={fieldClass}>
               <label>AMI ID</label>
               <input
+                className={inputClass}
                 value={state.ami}
                 onChange={(e) => setState((s) => ({ ...s, ami: e.target.value }))}
                 placeholder="ami-..."
               />
             </div>
-            <div className="step">
+            <div className={fieldClass}>
               <label>Key name (optional)</label>
               <input
+                className={inputClass}
                 value={state.key_name}
                 onChange={(e) => setState((s) => ({ ...s, key_name: e.target.value }))}
               />
             </div>
-            <div className="step">
+            <div className={fieldClass}>
               <label>Security group IDs (comma-separated)</label>
               <input
+                className={inputClass}
                 value={sgText}
                 onChange={(e) =>
                   setState((s) => ({
@@ -417,7 +435,7 @@ export function App() {
                 }
               />
             </div>
-            <div className="step">
+            <div className={fieldClass}>
               <label>
                 <input
                   type="checkbox"
@@ -429,7 +447,7 @@ export function App() {
                 Associate public IP
               </label>
             </div>
-            <div className="step">
+            <div className={fieldClass}>
               <label>
                 <input
                   type="checkbox"
@@ -441,15 +459,16 @@ export function App() {
                 Require IMDSv2
               </label>
             </div>
-            <div className="step">
+            <div className={fieldClass}>
               <label>SSH CIDR (for guidance)</label>
               <input
+                className={inputClass}
                 value={state.ssh_cidr}
                 onChange={(e) => setState((s) => ({ ...s, ssh_cidr: e.target.value }))}
                 placeholder="203.0.113.10/32"
               />
             </div>
-            <div className="step">
+            <div className={fieldClass}>
               <label>
                 <input
                   type="checkbox"
@@ -490,7 +509,7 @@ export function App() {
         )}
 
         {isAiAssistUIEnabled() && <AiAssistPanel state={state} />}
-      </div>
+      </main>
 
       <button
         type="button"

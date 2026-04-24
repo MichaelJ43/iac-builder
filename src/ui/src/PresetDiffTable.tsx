@@ -16,14 +16,14 @@ export function PresetDiffTable({ name, baseline, current, onClear }: Props) {
     <div className="preset-diff">
       <div className="preset-diff__head">
         <strong>Diff vs preset:</strong> {name}
-        <button type="button" className="toolbar-btn preset-diff__clear" onClick={onClear}>
+        <button type="button" className="toolbar-btn m43-button preset-diff__clear" onClick={onClear}>
           Clear baseline
         </button>
       </div>
       {rows.length === 0 ? (
         <p className="help">No differences — the wizard matches this preset.</p>
       ) : (
-        <table className="preset-diff__table">
+        <table className="preset-diff__table m43-table">
           <thead>
             <tr>
               <th>Field</th>

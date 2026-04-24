@@ -24,7 +24,7 @@ export function AiAssistPanel({ state }: Props) {
     <div className="ai-assist">
       <button
         type="button"
-        className="toolbar-btn ai-assist__toggle"
+        className="toolbar-btn m43-button ai-assist__toggle"
         onClick={() => setOpen((o) => !o)}
         aria-expanded={open}
       >
@@ -63,7 +63,7 @@ export function AiAssistPanel({ state }: Props) {
           </div>
           <button
             type="button"
-            className="primary"
+            className="primary m43-button m43-button--primary"
             disabled
             title="Model provider is not connected in this build. The checkbox and preview ship first."
             aria-disabled="true"

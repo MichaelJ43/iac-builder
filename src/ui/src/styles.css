@@ -75,7 +75,7 @@ body {
 
 .layout {
   display: flex;
-  min-height: 100vh;
+  min-height: calc(100vh - var(--m43-top-bar-inset, 0px));
 }
 /* When code drawer is open, reserve space so fields (e.g. VPC) are not covered by the fixed panel */
 .layout--sliderOpen .main {
@@ -105,7 +105,8 @@ body {
   transition: transform var(--ib-duration-panel) var(--ib-ease-panel);
   position: fixed;
   right: 0;
-  top: 0;
+  /* Keep the product drawer below the optional fixed m43 auth strip. */
+  top: var(--m43-top-bar-inset, 0px);
   bottom: 0;
   z-index: var(--ib-z-slider);
   display: flex;
@@ -118,11 +119,9 @@ body {
 .slider-tab {
   position: fixed;
   right: 0;
-  top: 40%;
+  top: calc(var(--m43-top-bar-inset, 0px) + 40%);
   z-index: var(--ib-z-slider-tab);
-  width: auto;
   max-width: none;
-  margin-bottom: 0;
   writing-mode: vertical-rl;
   transform: rotate(180deg);
   background: var(--ib-bg-code-tab);
@@ -160,10 +159,6 @@ label {
   width: auto;
   margin-bottom: 0;
   flex: 0 0 auto;
-  background: var(--ib-bg-elevated);
-  border: 1px solid var(--ib-border-input);
-  border-radius: var(--ib-radius-md);
-  cursor: pointer;
 }
 .wizard-toolbar .toolbar-btn:disabled {
   opacity: 0.45;
@@ -233,9 +228,13 @@ label {
   margin: -0.2rem 0 0.75rem;
   line-height: 1.45;
 }
-input,
-select,
-button {
+.m43-field > .m43-input {
+  width: 100%;
+  margin-bottom: 0.5rem;
+}
+input:not(.m43-input),
+select:not(.m43-input),
+button:not(.m43-button):not(.slider-tab) {
   width: 100%;
   padding: 0.5rem;
   margin-bottom: 0.5rem;
@@ -245,7 +244,11 @@ button {
   border: 1px solid var(--ib-border-input);
   border-radius: var(--ib-radius-sm);
 }
-button.primary {
+button.slider-tab {
+  width: auto;
+  margin-bottom: 0;
+}
+button.primary:not(.m43-button) {
   background: var(--ib-accent);
   color: #ffffff;
   border: none;
