@@ -29,7 +29,7 @@ output "alb_https_enabled" {
 }
 
 output "api_public_hostname" {
-  description = "When ALB TLS is on: FQDN for the CloudFront API origin. With custom domain + ACM, this is always api.<custom_domain> (point DNS to alb_dns_name). Legacy: var.api_public_hostname when alb_https_enabled."
+  description = "When ALB TLS is on: FQDN for the CloudFront API origin. With custom domain + ACM, this defaults to api.<custom_domain> unless api_custom_domain is set."
   value       = local.alb_https_enabled_effective ? local.api_public_hostname_effective : ""
 }
 

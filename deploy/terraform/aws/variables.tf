@@ -35,7 +35,13 @@ variable "alb_certificate_arn" {
 
 variable "api_public_hostname" {
   type        = string
-  description = "Legacy: FQDN for the API origin (must be on the ALB cert). When custom_domain + acm_certificate_arn are set, the origin is always api.<custom_domain> and this is ignored."
+  description = "Legacy: FQDN for the API origin (must be on the ALB cert). When custom_domain + acm_certificate_arn are set, api_custom_domain or api.<custom_domain> is used and this is ignored."
+  default     = ""
+}
+
+variable "api_custom_domain" {
+  type        = string
+  description = "Optional API origin hostname used with custom_domain + acm_certificate_arn. Defaults to api.<custom_domain>; previews can pass sibling names such as api-pr-123.example.com."
   default     = ""
 }
 
