@@ -170,7 +170,7 @@ export function App() {
   const errorClass = "message--error m43-message--error";
 
   return (
-    <div className={`layout${sliderOpen ? " layout--sliderOpen" : ""}`}>
+    <div className="layout">
       <main className="main m43-main">
         <header className="m43-site-header">
           <h1>iac-builder</h1>
