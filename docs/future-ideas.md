@@ -8,7 +8,7 @@ The table below lists **work that is not done yet**—not a history. When a row 
 
 | Priority | Theme | What’s left |
 |----------|--------|--------|
-| **P1** | UX & Polish | **AI assist (optional):** provider integration, user-triggered “send” path, **rate limits**, product/legal sign-off. |
+| **P1** | UX & Polish | **AI assist (optional):** LLM **provider** + server-side keys; product/**legal** sign-off. |
 | **P2** | Security depth | Org-wide guardrails, deeper automated CIS, **live** resource wiring to Secrets Manager / Parameter Store from the app. |
 | **P3** | Presets & catalogs | **Versioning** (or labels), **quick-builder** stack catalog, optional team/**org** libraries. |
 | **P4** | More frameworks / emitters | CloudFormation, Pulumi, Bicep, CDK, OpenTofu, Crossplane—beyond the current **Terraform**-oriented path. |
@@ -25,14 +25,15 @@ The table below lists **work that is not done yet**—not a history. When a row 
 ## P1 — UX and polish
 
 **Not done (same as the table).**  
-- **AI assist (optional):** explicit provider, user-triggered “send” path, **rate limits**, product/legal sign-off.
+- **AI assist (optional):** real **LLM** provider, server-side key handling, product/legal sign-off.  
+  **Shipped for this area:** `POST /api/v1/ai/assist` with v1 context validation, per-IP rate limit (`IAC_AI_ASSIST_RPM`), stub response; UI “Get AI suggestions” is user-triggered after policy checkbox.
 
 **Shipped in-tree (reference—do not copy back into the priority table).**  
 - **Wizard read order** and **header** copy: framework → region → **optional** profile → network & compute, with **starters** and **server presets** (collapsible) after the main path.  
 - **Toolbar hint** (Import vs **Create from JSON** for server presets), **import/export** / undo / comboboxes.  
 - **AWS discovery loading:** `useAwsDiscovery` exposes `loading` / `loadingSubnets` with a short **help** line and `aria-busy` / subtle styling on comboboxes while read-only lists refresh.  
 - **Client-side validation** before preview: required fields aligned with the API’s `Validate()`, inline `aria-invalid` / error text, optional format checks (SSH CIDR, security group ids, subnet/AMI prefixes when clearly wrong). Skips `/api/v1/preview` and security fetch when invalid.  
-- Build-flagged **AI assist** policy + JSON context preview only (`VITE_IAC_AI_ASSIST`); no model calls by default. See [`ai-assist.md`](ai-assist.md).
+- Build-flagged **AI assist** area (`VITE_IAC_AI_ASSIST`); policy + JSON preview + user-triggered API call (see above). No third-party model in default deployments. See [`ai-assist.md`](ai-assist.md).
 
 ---
 

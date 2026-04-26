@@ -433,6 +433,15 @@ button.primary:not(.m43-button) {
   margin: 0.15rem 0 0;
   flex-shrink: 0;
 }
+.ai-assist__err {
+  margin: 0.5rem 0 0;
+}
+.ai-assist__result {
+  margin: 0.5rem 0 0;
+  font-size: 0.9rem;
+  line-height: 1.45;
+  color: var(--ib-fg-muted);
+}
 .ai-assist .primary:disabled {
   opacity: 0.55;
   cursor: not-allowed;

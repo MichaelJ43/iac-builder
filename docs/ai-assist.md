@@ -18,9 +18,15 @@ This document defines **P1 (UX)** for optional AI support in the iac-builder web
 - **Transparency:** a **read-only** preview of the same JSON context that a provider call would use (or a strict subset) is shown in the panel.
 - **No silent network to LLMs** in the shipping configuration until an integration is added with explicit user action and (where applicable) server-side key handling.
 
-## Roadmap (not committed here)
+## API: `POST /api/v1/ai/assist`
 
-- Wire a provider behind a new API with rate limits, logging redaction, and an abuse-oriented privacy review.
+- **Body:** JSON `{ "context": <v1 object> }` where `context` is the same shape the UI builds with `buildAiContextForAiAssist` (must include `v: 1`, `app: "iac-builder"`, and a `wizard` object).
+- **Rate limit:** per client IP, wall-clock minute window; cap set by `IAC_AI_ASSIST_RPM` (default **20**). On exceed: HTTP 429 and `Retry-After: 60`.
+- **Default response:** JSON `{ "ok", "mode", "message", "suggestions" }` with `mode: "stub"` and no language model until a provider is configured server-side.
+
+## Roadmap (not fully committed here)
+
+- Wire an LLM provider with server-side keys, log redaction, and an abuse-oriented privacy / legal sign-off.
 
 ## References
 

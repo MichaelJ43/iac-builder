@@ -3,7 +3,9 @@ package httpapi
 import (
 	"encoding/json"
 	"net/http"
+	"sync"
 
+	"github.com/MichaelJ43/iac-builder/api/internal/aiassist"
 	"github.com/MichaelJ43/iac-builder/api/internal/auth"
 	"github.com/MichaelJ43/iac-builder/api/internal/gen"
 	"github.com/MichaelJ43/iac-builder/api/internal/security"
@@ -19,6 +21,9 @@ type Server struct {
 	Store   *store.Store
 	Version string
 	Auth    *auth.Platform
+
+	ailOnce sync.Once
+	ail     *aiassist.Limiter
 }
 
 func (s *Server) Handler() http.Handler {
@@ -40,6 +45,7 @@ func (s *Server) Handler() http.Handler {
 
 	r.Post("/api/v1/preview", s.handlePreview)
 	r.Post("/api/v1/security/recommendations", s.handleSecurity)
+	r.Post("/api/v1/ai/assist", s.handleAIAssist)
 
 	profile := func(r chi.Router) {
 		r.Get("/", s.handleListProfiles)
