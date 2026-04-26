@@ -56,6 +56,8 @@ export function App() {
   const [newPresetName, setNewPresetName] = useState("");
   const [presetSaveBusy, setPresetSaveBusy] = useState(false);
   const [presetDeleteBusy, setPresetDeleteBusy] = useState(false);
+  const [presetApplyBusy, setPresetApplyBusy] = useState(false);
+  const [presetDownloadBusy, setPresetDownloadBusy] = useState(false);
   const [presetActionErr, setPresetActionErr] = useState<string | null>(null);
   const [selectedStarterId, setSelectedStarterId] = useState("");
   const selectedStarter = useMemo(
@@ -343,6 +345,63 @@ export function App() {
     })();
   }, [selectedPresetId, diffBaselinePresetId, refreshPresets]);
 
+  const loadSelectedPresetIntoWizard = useCallback(() => {
+    if (!selectedPresetId) {
+      return;
+    }
+    if (
+      !window.confirm(
+        "Replace the current wizard with this preset? You can use Undo to restore the previous state."
+      )
+    ) {
+      return;
+    }
+    setPresetActionErr(null);
+    setPresetApplyBusy(true);
+    void (async () => {
+      try {
+        const w = await getPresetWizard(selectedPresetId);
+        replaceWithState(structuredClone(w));
+        setDiffBaseline(null);
+        setDiffBaselineName(null);
+        setDiffBaselinePresetId(null);
+        setPresetCompareErr(null);
+      } catch (e) {
+        setPresetActionErr(errorMessageFromUnknown(e));
+      } finally {
+        setPresetApplyBusy(false);
+      }
+    })();
+  }, [selectedPresetId, replaceWithState]);
+
+  const downloadSelectedPresetAsJson = useCallback(() => {
+    if (!selectedPresetId) {
+      return;
+    }
+    setPresetActionErr(null);
+    setPresetDownloadBusy(true);
+    void (async () => {
+      try {
+        const w = await getPresetWizard(selectedPresetId);
+        const meta = presets.find((p) => p.id === selectedPresetId);
+        const body = stringifyExport(buildWizardExport(w));
+        const blob = new Blob([body], { type: "application/json" });
+        const a = document.createElement("a");
+        const url = URL.createObjectURL(blob);
+        a.href = url;
+        const raw = meta?.name?.trim() || "preset";
+        const safe = raw.replace(/[^a-zA-Z0-9._-]+/g, "-").replace(/^-+|-+$/g, "") || "preset";
+        a.download = `iac-builder-preset-${safe}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+      } catch (e) {
+        setPresetActionErr(errorMessageFromUnknown(e));
+      } finally {
+        setPresetDownloadBusy(false);
+      }
+    })();
+  }, [selectedPresetId, presets]);
+
   const toolbarButtonClass = "toolbar-btn m43-button";
   const fieldClass = "step m43-field";
   const inputClass = "m43-input";
@@ -420,9 +479,10 @@ export function App() {
         <div className={`${fieldClass} preset-compare`}>
           <label>Saved API presets</label>
           <p className="help">
-            Presets are stored on the server. <strong>Save</strong> the current wizard as a new preset,{" "}
-            <strong>Set baseline</strong> to diff your edits without changing the form, or <strong>Delete</strong> a
-            preset you no longer need.
+            Presets are stored on the server. <strong>Load into wizard</strong> replaces your answers (Undo
+            reverts). <strong>Set baseline</strong> diffs without changing the form. <strong>Download as JSON</strong>{" "}
+            uses the same file shape as <strong>Export configuration</strong> for sharing. <strong>Delete</strong>{" "}
+            removes a preset from the API.
           </p>
           {presetListErr && <p className="preset-compare__err m43-message--error">{presetListErr}</p>}
           {presetActionErr && <p className="preset-compare__err m43-message--error">{presetActionErr}</p>}
@@ -473,6 +533,22 @@ export function App() {
               }}
             >
               {compareLoading ? "Loading…" : "Set baseline"}
+            </button>
+            <button
+              type="button"
+              className={toolbarButtonClass}
+              disabled={!selectedPresetId || presetApplyBusy}
+              onClick={loadSelectedPresetIntoWizard}
+            >
+              {presetApplyBusy ? "Loading…" : "Load into wizard"}
+            </button>
+            <button
+              type="button"
+              className={toolbarButtonClass}
+              disabled={!selectedPresetId || presetDownloadBusy}
+              onClick={downloadSelectedPresetAsJson}
+            >
+              {presetDownloadBusy ? "Preparing…" : "Download as JSON"}
             </button>
             <button
               type="button"
