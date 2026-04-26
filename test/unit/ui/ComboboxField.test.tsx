@@ -18,6 +18,22 @@ function Harness() {
 }
 
 describe("ComboboxField", () => {
+  it("sets aria-busy when busy", () => {
+    render(
+      <ComboboxField
+        label="N"
+        value=""
+        onChange={() => undefined}
+        suggestions={[]}
+        busy
+        aria-label="N"
+      />
+    );
+    expect(
+      (screen.getByLabelText("N") as HTMLInputElement).getAttribute("aria-busy")
+    ).toBe("true");
+  });
+
   it("updates value and keeps custom text", async () => {
     const user = userEvent.setup();
     render(<Harness />);

@@ -46,6 +46,48 @@ describe("useAwsDiscovery", () => {
     );
   });
 
+  it("sets loading true until the primary batch resolves", async () => {
+    type VPC = { id: string; is_default: boolean };
+    type KP = { name: string };
+    type AMI = { id: string; name: string };
+    let resolveV!: (v: VPC[]) => void;
+    let resolveK!: (v: KP[]) => void;
+    let resolveA!: (v: AMI[]) => void;
+    const pV = new Promise<VPC[]>((r) => {
+      resolveV = r;
+    });
+    const pK = new Promise<KP[]>((r) => {
+      resolveK = r;
+    });
+    const pA = new Promise<AMI[]>((r) => {
+      resolveA = r;
+    });
+    vi.spyOn(cred, "listVPCsForProfile").mockReturnValue(pV);
+    vi.spyOn(cred, "listKeyPairsForProfile").mockReturnValue(pK);
+    vi.spyOn(cred, "listAMISuggestionsForProfile").mockReturnValue(pA);
+    const { result, rerender } = renderHook(
+      ({ pid, reg, vpc }: { pid: string; reg: string; vpc: string }) => useAwsDiscovery(pid, reg, vpc),
+      { initialProps: { pid: "", reg: "", vpc: "" } }
+    );
+    rerender({ pid: "p1", reg: "us-east-1", vpc: "" });
+    await waitFor(
+      () => {
+        expect(result.current.loading).toBe(true);
+      },
+      { timeout: 3000 }
+    );
+    resolveV([{ id: "vpc-1", is_default: false }]);
+    resolveK([{ name: "kp" }]);
+    resolveA([{ id: "ami-1", name: "al2" }]);
+    await waitFor(
+      () => {
+        expect(result.current.loading).toBe(false);
+        expect(result.current.vpcs[0]?.id).toBe("vpc-1");
+      },
+      { timeout: 3000 }
+    );
+  });
+
   it("sets error when vpcs call fails", async () => {
     vi.spyOn(cred, "listVPCsForProfile").mockRejectedValue(new Error("network"));
     vi.spyOn(cred, "listKeyPairsForProfile").mockRejectedValue(new Error("network"));

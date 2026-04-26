@@ -19,6 +19,10 @@ export type Discovery = {
   keyPairs: KeyPairRow[];
   amis: AMIInfo[];
   error: string | null;
+  /** True while the region-scoped list (VPCs, key pairs, AMIs) is loading. */
+  loading: boolean;
+  /** True while subnet and security group lists for the selected VPC are loading. */
+  loadingSubnets: boolean;
 };
 
 /**
@@ -36,6 +40,8 @@ export function useAwsDiscovery(
   const [keyPairs, setKeyPairs] = useState<KeyPairRow[]>([]);
   const [amis, setAmis] = useState<AMIInfo[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [loadingSubnets, setLoadingSubnets] = useState(false);
 
   const ready = profileId.trim() !== "" && region.trim() !== "";
   const vpcReady = ready && vpcId.trim() !== "";
@@ -43,11 +49,13 @@ export function useAwsDiscovery(
   useEffect(() => {
     if (!ready) {
       setVpcs([]);
+      setLoading(false);
       return;
     }
+    setLoading(true);
+    setError(null);
     let cancel = false;
     const t = setTimeout(() => {
-      setError(null);
       void (async () => {
         try {
           const [v, k, a] = await Promise.all([
@@ -67,12 +75,17 @@ export function useAwsDiscovery(
             setAmis([]);
             setError(e instanceof Error ? e.message : String(e));
           }
+        } finally {
+          if (!cancel) {
+            setLoading(false);
+          }
         }
       })();
     }, 350);
     return () => {
       cancel = true;
       clearTimeout(t);
+      setLoading(false);
     };
   }, [profileId, region, ready]);
 
@@ -80,8 +93,10 @@ export function useAwsDiscovery(
     if (!vpcReady) {
       setSubnets([]);
       setSecurityGroups([]);
+      setLoadingSubnets(false);
       return;
     }
+    setLoadingSubnets(true);
     let cancel = false;
     const t = setTimeout(() => {
       void (async () => {
@@ -100,12 +115,17 @@ export function useAwsDiscovery(
             setSecurityGroups([]);
             setError(e instanceof Error ? e.message : String(e));
           }
+        } finally {
+          if (!cancel) {
+            setLoadingSubnets(false);
+          }
         }
       })();
     }, 300);
     return () => {
       cancel = true;
       clearTimeout(t);
+      setLoadingSubnets(false);
     };
   }, [profileId, region, vpcId, vpcReady]);
 
@@ -116,5 +136,7 @@ export function useAwsDiscovery(
     keyPairs,
     amis,
     error,
+    loading,
+    loadingSubnets,
   };
 }

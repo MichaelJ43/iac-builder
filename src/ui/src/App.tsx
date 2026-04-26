@@ -182,6 +182,20 @@ export function App() {
     [discovery.securityGroups]
   );
 
+  const discoveryListLoading = useMemo(
+    () =>
+      selectedProfileId.trim() !== "" && state.region.trim() !== "" && discovery.loading,
+    [selectedProfileId, state.region, discovery.loading]
+  );
+  const discoverySubnetSgLoading = useMemo(
+    () =>
+      selectedProfileId.trim() !== "" &&
+      state.region.trim() !== "" &&
+      state.vpc_id.trim() !== "" &&
+      discovery.loadingSubnets,
+    [selectedProfileId, state.region, state.vpc_id, discovery.loadingSubnets]
+  );
+
   const canShowCloud = state.framework !== "";
   const canShowRegion = canShowCloud;
   const canShowNetwork = state.region.trim() !== "";
@@ -633,12 +647,18 @@ export function App() {
         )}
         {canShowNetwork && (
           <>
+            {selectedProfileId && (discovery.loading || discovery.loadingSubnets) && (
+              <p className="help" aria-live="polite">
+                Loading AWS read-only suggestions for this profile and region…
+              </p>
+            )}
             <ComboboxField
               label="VPC ID (optional)"
               value={state.vpc_id}
               onChange={(v) => setState((s) => ({ ...s, vpc_id: v }))}
               suggestions={vpcOpts}
               placeholder="vpc-... (optional)"
+              busy={discoveryListLoading}
               help={
                 selectedProfileId ? (
                   <>
@@ -657,6 +677,7 @@ export function App() {
               onChange={(v) => setState((s) => ({ ...s, subnet_id: v }))}
               suggestions={subnetOpts}
               placeholder="subnet-..."
+              busy={discoverySubnetSgLoading}
               help={
                 <>
                   Required for EC2. With a <strong>VPC</strong> and profile, we list subnets in that VPC; you can
@@ -685,6 +706,7 @@ export function App() {
               onChange={(v) => setState((s) => ({ ...s, ami: v }))}
               suggestions={amiOpts}
               placeholder="ami-..."
+              busy={discoveryListLoading}
               help="Latest Amazon Linux suggestions load when a profile is selected; you can use any machine image id."
               aria-label="AMI id"
             />
@@ -693,6 +715,7 @@ export function App() {
               value={state.key_name}
               onChange={(v) => setState((s) => ({ ...s, key_name: v }))}
               suggestions={keyOpts}
+              busy={discoveryListLoading}
               help="EC2 key pairs in this region, or a custom name."
               aria-label="Key pair name"
             />
@@ -700,7 +723,7 @@ export function App() {
               <label>Security group IDs (comma-separated)</label>
               <p className="help">Suggestions are per-VPC when a profile and VPC are set. Separate multiple IDs with commas.</p>
               <input
-                className={inputClass}
+                className={discoverySubnetSgLoading ? `${inputClass} m43-input--busy` : inputClass}
                 value={sgText}
                 onChange={(e) =>
                   setState((s) => ({
@@ -712,6 +735,7 @@ export function App() {
                   }))
                 }
                 list="ib-sg-suggest"
+                aria-busy={discoverySubnetSgLoading}
                 aria-label="Security group ids"
               />
               <datalist id="ib-sg-suggest">
