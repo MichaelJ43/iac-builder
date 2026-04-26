@@ -257,6 +257,9 @@ label {
   width: 100%;
   margin-bottom: 0.5rem;
 }
+.m43-input--busy {
+  opacity: 0.82;
+}
 .layout input:not(.m43-input),
 .layout select:not(.m43-input),
 .layout button:not(.m43-button):not(.slider-tab) {
