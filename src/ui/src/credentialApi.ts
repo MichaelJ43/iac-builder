@@ -71,6 +71,19 @@ export async function createCredentialProfile(body: {
   return data.id;
 }
 
+export async function deleteCredentialProfile(id: string): Promise<void> {
+  const res = await fetch(`${base}/api/v1/profiles/${encodeURIComponent(id)}`, {
+    ...withCredentials,
+    method: "DELETE",
+  });
+  if (res.status === 404) {
+    throw new Error("profile not found");
+  }
+  if (!res.ok) {
+    throw new Error(await normalizeFetchError(res));
+  }
+}
+
 export type VPCRow = { id: string; is_default: boolean };
 export type SubnetRow = { id: string; az: string };
 export type SGRow = { id: string; name: string };

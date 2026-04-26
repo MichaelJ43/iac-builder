@@ -45,6 +45,7 @@ func (s *Server) Handler() http.Handler {
 		r.Get("/", s.handleListProfiles)
 		r.Post("/", s.handleCreateProfile)
 		r.Route("/{id}", func(r chi.Router) {
+			r.Delete("/", s.handleDeleteProfile)
 			r.Post("/validate", s.handleValidateProfile)
 			r.Get("/aws/vpcs", s.handleListVPCs)
 			r.Get("/aws/subnets", s.handleListSubnets)
@@ -164,4 +165,32 @@ func (s *Server) handleCreateProfile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusCreated, map[string]string{"id": id})
+}
+
+func (s *Server) handleDeleteProfile(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	if id == "" {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "missing id"})
+		return
+	}
+	authOn := s.Auth != nil && s.Auth.Enabled()
+	uid := ""
+	if authOn {
+		u, ok := s.userIDFromContext(r)
+		if !ok {
+			writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "unauthorized"})
+			return
+		}
+		uid = u
+	}
+	n, err := s.Store.DeleteProfile(r.Context(), id, uid, authOn)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		return
+	}
+	if n == 0 {
+		writeJSON(w, http.StatusNotFound, map[string]string{"error": "profile not found"})
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }

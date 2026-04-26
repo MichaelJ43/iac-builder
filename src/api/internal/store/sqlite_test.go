@@ -57,3 +57,32 @@ func TestGetAWSCredsEnforceUser(t *testing.T) {
 		t.Fatalf("creds: %v", err)
 	}
 }
+
+func TestDeleteProfileEnforceUser(t *testing.T) {
+	mk, _ := crypto.ParseMasterKey("0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20")
+	s, err := OpenSQLite("file::memory:?cache=shared", mk)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = s.Close() })
+	ctx := context.Background()
+	id, err := s.CreateProfile(ctx, "u1", "k", "aws", "us-east-1", AWSCreds{AccessKeyID: "A", SecretAccessKey: "B"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	n, err := s.DeleteProfile(ctx, id, "wrong", true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if n != 0 {
+		t.Fatalf("expected 0 rows, got %d", n)
+	}
+	n, err = s.DeleteProfile(ctx, id, "u1", true)
+	if err != nil || n != 1 {
+		t.Fatalf("delete: n=%d err=%v", n, err)
+	}
+	n, err = s.DeleteProfile(ctx, id, "u1", true)
+	if err != nil || n != 0 {
+		t.Fatalf("second delete: n=%d err=%v", n, err)
+	}
+}

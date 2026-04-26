@@ -3,13 +3,7 @@ import type { Framework, SecurityRecommendation, WizardState } from "./api";
 import { emptyWizardState, preview, securityRecommendations } from "./api";
 import { AWS_REGIONS, INSTANCE_TYPE_SUGGESTIONS } from "./awsConstants";
 import { ComboboxField } from "./ComboboxField";
-import {
-  createCredentialProfile,
-  fetchAuthStatus,
-  listCredentialProfiles,
-  type AuthStatus,
-  type ProfileSummary,
-} from "./credentialApi";
+import { fetchAuthStatus, listCredentialProfiles, type AuthStatus, type ProfileSummary } from "./credentialApi";
 import { errorMessageFromUnknown } from "./fetchUtils";
 import { PresetDiffTable } from "./PresetDiffTable";
 import { getPresetWizard, listPresets, type PresetSummary } from "./presetApi";
@@ -24,6 +18,7 @@ import {
 import { getStarterTemplate, STARTER_TEMPLATES } from "./starterCatalog";
 import { AiAssistPanel } from "./AiAssistPanel";
 import { isAiAssistUIEnabled } from "./flags";
+import { ManageProfilesModal } from "./ManageProfilesModal";
 
 const frameworks: { id: Framework; label: string }[] = [
   { id: "terraform", label: "Terraform (HCL)" },
@@ -60,12 +55,7 @@ export function App() {
   const [profiles, setProfiles] = useState<ProfileSummary[]>([]);
   const [profileListErr, setProfileListErr] = useState<string | null>(null);
   const [selectedProfileId, setSelectedProfileId] = useState("");
-  const [npName, setNpName] = useState("");
-  const [npRegion, setNpRegion] = useState("");
-  const [npAk, setNpAk] = useState("");
-  const [npSk, setNpSk] = useState("");
-  const [profileFormErr, setProfileFormErr] = useState<string | null>(null);
-  const [profileSaveBusy, setProfileSaveBusy] = useState(false);
+  const [profileModalOpen, setProfileModalOpen] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -138,6 +128,11 @@ export function App() {
       cancelled = true;
     };
   }, [authStatus]);
+
+  const activeProfile = useMemo(
+    () => profiles.find((p) => p.id === selectedProfileId),
+    [profiles, selectedProfileId]
+  );
 
   const discovery = useAwsDiscovery(selectedProfileId, state.region, state.vpc_id);
 
@@ -217,37 +212,22 @@ export function App() {
     [state.security_group_ids]
   );
 
-  const saveNewProfile = useCallback(() => {
-    if (!canSaveProfile) {
-      return;
-    }
-    setProfileFormErr(null);
-    if (!npName.trim() || !npRegion.trim() || !npAk.trim() || !npSk.trim()) {
-      setProfileFormErr("Name, default region, access key, and secret are required.");
-      return;
-    }
-    setProfileSaveBusy(true);
-    void (async () => {
-      try {
-        const id = await createCredentialProfile({
-          name: npName.trim(),
-          default_region: npRegion.trim(),
-          access_key_id: npAk,
-          secret_access_key: npSk,
-        });
-        setNpAk("");
-        setNpSk("");
-        setNpName("");
-        setSelectedProfileId(id);
-        const list = await listCredentialProfiles();
-        setProfiles(list);
-      } catch (e) {
-        setProfileFormErr(errorMessageFromUnknown(e));
-      } finally {
-        setProfileSaveBusy(false);
+  const selectProfile = useCallback(
+    (id: string) => {
+      setSelectedProfileId(id);
+      if (!id) {
+        return;
       }
-    })();
-  }, [canSaveProfile, npAk, npName, npRegion, npSk]);
+      const p = profiles.find((x) => x.id === id);
+      if (p?.default_region) {
+        setState((s) => ({
+          ...s,
+          region: s.region.trim() ? s.region : p.default_region!,
+        }));
+      }
+    },
+    [profiles, setState]
+  );
 
   const exportConfiguration = useCallback(() => {
     setImportErr(null);
@@ -443,94 +423,47 @@ export function App() {
           <div className={fieldClass}>
             <label>AWS credential profile (API)</label>
             <p className="help">
-              Keys are <strong>encrypted on the server</strong> and never shown again. Select a profile to
-              auto-suggest VPCs, subnets, and related IDs for the region. You can always type custom values; lists
-              are optional hints.
+              Keys are <strong>encrypted on the server</strong> and never shown again. Choose a profile to
+              auto-suggest VPCs, subnets, and related IDs, or add and remove profiles in the manager. You can
+              always type custom values; lists are optional hints.
             </p>
             {profileListErr && <p className={errorClass}>{profileListErr}</p>}
             {discovery.error && <p className={errorClass}>{discovery.error}</p>}
-            <div className="preset-compare__row">
-              <select
-                className={inputClass}
-                value={selectedProfileId}
-                onChange={(e) => {
-                  const id = e.target.value;
-                  setSelectedProfileId(id);
-                  if (!id) {
-                    return;
-                  }
-                  const p = profiles.find((x) => x.id === id);
-                  if (p?.default_region) {
-                    setState((s) => ({
-                      ...s,
-                      region: s.region.trim() ? s.region : p.default_region!,
-                    }));
-                  }
-                }}
-                aria-label="Saved AWS credential profile"
-              >
-                <option value="">No profile (manual IDs only)</option>
-                {profiles.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name} ({p.default_region || "—"})
-                  </option>
-                ))}
-              </select>
-            </div>
-            <p className="help">Add a new encrypted profile (same API as the CLI):</p>
-            <div className="preset-compare__row" style={{ flexWrap: "wrap", gap: "0.5rem" }}>
-              <input
-                className={inputClass}
-                value={npName}
-                onChange={(e) => setNpName(e.target.value)}
-                placeholder="Profile name"
-                aria-label="New profile name"
-                disabled={!canSaveProfile || profileSaveBusy}
-              />
-              <input
-                className={inputClass}
-                value={npRegion}
-                onChange={(e) => setNpRegion(e.target.value)}
-                placeholder="Default region (e.g. us-east-1)"
-                aria-label="Default region for new profile"
-                disabled={!canSaveProfile || profileSaveBusy}
-              />
-            </div>
-            <div className="preset-compare__row" style={{ flexWrap: "wrap", gap: "0.5rem" }}>
-              <input
-                className={inputClass}
-                value={npAk}
-                onChange={(e) => setNpAk(e.target.value)}
-                placeholder="Access key ID"
-                autoComplete="off"
-                aria-label="AWS access key id"
-                disabled={!canSaveProfile || profileSaveBusy}
-              />
-              <input
-                className={inputClass}
-                type="password"
-                value={npSk}
-                onChange={(e) => setNpSk(e.target.value)}
-                placeholder="Secret access key"
-                autoComplete="off"
-                aria-label="AWS secret access key"
-                disabled={!canSaveProfile || profileSaveBusy}
-              />
+            <div className="profile-inline">
+              <p className="profile-inline__summary" aria-live="polite">
+                {activeProfile ? (
+                  <>
+                    Using{" "}
+                    <strong>
+                      {activeProfile.name}{" "}
+                      <span className="profile-inline__region">({activeProfile.default_region || "—"})</span>
+                    </strong>
+                  </>
+                ) : (
+                  <span className="profile-inline__none">No profile — manual AWS IDs only</span>
+                )}
+              </p>
               <button
                 type="button"
                 className={toolbarButtonClass}
-                onClick={saveNewProfile}
-                disabled={!canSaveProfile || profileSaveBusy}
+                onClick={() => setProfileModalOpen(true)}
+                aria-haspopup="dialog"
+                aria-expanded={profileModalOpen}
+                aria-controls="profile-modal"
               >
-                {profileSaveBusy ? "Saving…" : "Save profile"}
+                Manage profiles
               </button>
             </div>
-            {profileFormErr && <p className={errorClass}>{profileFormErr}</p>}
-            {authStatus.kind === "signedIn" && (
-              <p className="help">
-                Signed in as <code>{authStatus.userId}</code> — profiles are scoped to your account.
-              </p>
-            )}
+            <ManageProfilesModal
+              open={profileModalOpen}
+              onClose={() => setProfileModalOpen(false)}
+              canSave={canSaveProfile}
+              authStatus={authStatus}
+              profiles={profiles}
+              selectedProfileId={selectedProfileId}
+              onSelectProfile={selectProfile}
+              onProfilesRefreshed={setProfiles}
+            />
           </div>
         )}
 

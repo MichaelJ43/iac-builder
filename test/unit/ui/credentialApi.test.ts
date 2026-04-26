@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   createCredentialProfile,
+  deleteCredentialProfile,
   fetchAuthStatus,
   listAMISuggestionsForProfile,
   listCredentialProfiles,
@@ -93,6 +94,32 @@ describe("credentialApi", () => {
       secret_access_key: "B",
     });
     expect(id).toBe("new-id");
+  });
+
+  it("deleteCredentialProfile succeeds on 204", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => ({
+        ok: true,
+        status: 204,
+        json: async () => ({}),
+        text: async () => "",
+      }))
+    );
+    await expect(deleteCredentialProfile("pid-1")).resolves.toBeUndefined();
+  });
+
+  it("deleteCredentialProfile throws on 404", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => ({
+        ok: false,
+        status: 404,
+        json: async () => ({}),
+        text: async () => "not found",
+      }))
+    );
+    await expect(deleteCredentialProfile("missing")).rejects.toThrow(/profile not found/);
   });
 
   it("discovery helpers parse json", async () => {
