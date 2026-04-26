@@ -27,7 +27,7 @@ This document captures **post-MVP** and **in-flight** product directions. For cu
 
 **Still to build**  
 - **AI:** optional provider + explicit “send” path, **rate limits**, product/legal review.  
-- **Form UX / polish:** e.g. collapse **Saved API presets** into `<details>`, or a small “**Advanced**” region for presets; clearer distinction between “**Import configuration**” (replaces the live wizard) vs “**Create from JSON file**” (adds a server preset); field-level **validation** before preview; **skeleton/loading** for discovery rows when profile + region are set.
+- **Form UX / polish:** field-level **validation** before preview; **skeleton/loading** for discovery rows when profile + region are set. (Toolbar hint + collapsible **Server presets** shipped in the wizard-flow PR.)
 
 ---
 

@@ -479,11 +479,16 @@ export function App() {
             type="button"
             className={toolbarButtonClass}
             onClick={() => importFileRef.current?.click()}
+            aria-describedby="toolbar-json-hint"
             aria-label="Import configuration from a JSON file on your device"
           >
             Import configuration
           </button>
         </div>
+        <p className="help wizard-toolbar__hint" id="toolbar-json-hint">
+          <strong>Import configuration</strong> replaces the current wizard. <strong>Create from JSON file</strong> in{" "}
+          <strong>Server presets</strong> below only adds a v1 export to the API; it does not change the form.
+        </p>
         {importErr && <p className={errorClass}>{importErr}</p>}
 
         <div className={`${fieldClass} starter-catalog`}>
@@ -763,8 +768,8 @@ export function App() {
         )}
 
 
-        <div className={`${fieldClass} preset-compare`}>
-          <label>Saved API presets</label>
+        <details className={`${fieldClass} preset-compare preset-compare--details`}>
+          <summary className="preset-compare__summary">Server presets (API)</summary>
           <p className="help">
             Presets are stored on the server. <strong>Load into wizard</strong> replaces your answers (Undo
             reverts). <strong>Set baseline</strong> diffs without changing the form. <strong>Download as JSON</strong>{" "}
@@ -905,7 +910,7 @@ export function App() {
               }}
             />
           )}
-        </div>
+        </details>
         {hints.length > 0 && (
           <div className="hints">
             <strong>Security hints</strong>
