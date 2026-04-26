@@ -1,4 +1,12 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
+import {
+  useCallback,
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+  type ChangeEvent,
+} from "react";
 import type { Framework, SecurityRecommendation, WizardState } from "./api";
 import { emptyWizardState, preview, securityRecommendations } from "./api";
 import { AWS_REGIONS, INSTANCE_TYPE_SUGGESTIONS } from "./awsConstants";
@@ -25,6 +33,7 @@ import { getStarterTemplate, STARTER_TEMPLATES } from "./starterCatalog";
 import { AiAssistPanel } from "./AiAssistPanel";
 import { isAiAssistUIEnabled } from "./flags";
 import { ManageProfilesModal } from "./ManageProfilesModal";
+import { validateWizardForPreview } from "./wizardValidation";
 
 const frameworks: { id: Framework; label: string }[] = [
   { id: "terraform", label: "Terraform (HCL)" },
@@ -203,18 +212,19 @@ export function App() {
   const canSaveProfile =
     authStatus !== null && (authStatus.kind === "disabled" || authStatus.kind === "signedIn");
 
-  const readyForPreview =
-    state.framework &&
-    state.cloud === "aws" &&
-    state.region &&
-    state.subnet_id &&
-    state.instance_type &&
-    state.ami;
+  const { ok: canPreview, fields: fieldErr } = useMemo(
+    () => validateWizardForPreview(state),
+    [state]
+  );
+  const frameworkErrId = useId();
+  const cloudErrId = useId();
+  const sgErrId = useId();
 
   const refresh = useCallback(async () => {
-    if (!readyForPreview) {
+    if (!canPreview) {
       setPreviewText("");
       setHints([]);
+      setErr(null);
       return;
     }
     try {
@@ -227,7 +237,7 @@ export function App() {
     } catch (e) {
       setErr(errorMessageFromUnknown(e));
     }
-  }, [state, readyForPreview]);
+  }, [state, canPreview]);
 
   useEffect(() => {
     const t = setTimeout(() => {
@@ -548,10 +558,13 @@ export function App() {
         {err && <p className={errorClass}>{err}</p>}
 
         <div className={fieldClass}>
-          <label>IaC framework</label>
+          <label htmlFor="wizard-framework">IaC framework</label>
           <select
+            id="wizard-framework"
             className={inputClass}
             aria-label="IaC framework"
+            aria-invalid={fieldErr.framework ? true : undefined}
+            aria-describedby={fieldErr.framework ? frameworkErrId : undefined}
             value={state.framework}
             onChange={(e) => setState((s) => ({ ...s, framework: e.target.value as Framework }))}
           >
@@ -562,18 +575,31 @@ export function App() {
               </option>
             ))}
           </select>
+          {fieldErr.framework && (
+            <p id={frameworkErrId} className={errorClass} role="alert">
+              {fieldErr.framework}
+            </p>
+          )}
         </div>
 
         {canShowCloud && (
           <div className={fieldClass}>
-            <label>Cloud</label>
+            <label htmlFor="wizard-cloud">Cloud</label>
             <select
+              id="wizard-cloud"
               className={inputClass}
+              aria-invalid={fieldErr.cloud ? true : undefined}
+              aria-describedby={fieldErr.cloud ? cloudErrId : undefined}
               value={state.cloud}
               onChange={(e) => setState((s) => ({ ...s, cloud: e.target.value }))}
             >
               <option value="aws">AWS</option>
             </select>
+            {fieldErr.cloud && (
+              <p id={cloudErrId} className={errorClass} role="alert">
+                {fieldErr.cloud}
+              </p>
+            )}
           </div>
         )}
 
@@ -585,6 +611,7 @@ export function App() {
             suggestions={regionOpts}
             placeholder="us-east-1"
             help={<>Type any region; the list is a shortcut for common values.</>}
+            error={fieldErr.region}
             aria-label="AWS region"
           />
         )}
@@ -684,6 +711,7 @@ export function App() {
                   still paste a subnet from another VPC if you need to.
                 </>
               }
+              error={fieldErr.subnet_id}
               aria-label="Subnet ID"
             />
           </>
@@ -698,6 +726,7 @@ export function App() {
               suggestions={instOpts}
               placeholder="t3.micro"
               help="Pick a common size or type your own (must exist in the region / account limits)."
+              error={fieldErr.instance_type}
               aria-label="Instance type"
             />
             <ComboboxField
@@ -708,6 +737,7 @@ export function App() {
               placeholder="ami-..."
               busy={discoveryListLoading}
               help="Latest Amazon Linux suggestions load when a profile is selected; you can use any machine image id."
+              error={fieldErr.ami}
               aria-label="AMI id"
             />
             <ComboboxField
@@ -720,9 +750,10 @@ export function App() {
               aria-label="Key pair name"
             />
             <div className={fieldClass}>
-              <label>Security group IDs (comma-separated)</label>
+              <label htmlFor="wizard-sg-ids">Security group IDs (comma-separated)</label>
               <p className="help">Suggestions are per-VPC when a profile and VPC are set. Separate multiple IDs with commas.</p>
               <input
+                id="wizard-sg-ids"
                 className={discoverySubnetSgLoading ? `${inputClass} m43-input--busy` : inputClass}
                 value={sgText}
                 onChange={(e) =>
@@ -736,8 +767,15 @@ export function App() {
                 }
                 list="ib-sg-suggest"
                 aria-busy={discoverySubnetSgLoading}
+                aria-invalid={fieldErr.security_group_ids ? true : undefined}
+                aria-describedby={fieldErr.security_group_ids ? sgErrId : undefined}
                 aria-label="Security group ids"
               />
+              {fieldErr.security_group_ids && (
+                <p id={sgErrId} className={errorClass} role="alert">
+                  {fieldErr.security_group_ids}
+                </p>
+              )}
               <datalist id="ib-sg-suggest">
                 {sgOpts.map((o) => (
                   <option key={o.value} value={o.value} />
@@ -776,6 +814,7 @@ export function App() {
               ]}
               placeholder="203.0.113.10/32"
               help="Used only for security hints, not in all templates."
+              error={fieldErr.ssh_cidr}
               aria-label="SSH CIDR for guidance"
             />
             <div className={fieldClass}>
@@ -972,7 +1011,12 @@ export function App() {
         {sliderOpen ? "Hide code" : "Show code"}
       </button>
       <aside className={`slider ${sliderOpen ? "open" : ""}`}>
-        <pre>{previewText || "// complete required fields to preview"}</pre>
+        <pre>
+          {previewText ||
+            (!canPreview
+              ? "// fix validation issues in the form to preview"
+              : "// loading preview…")}
+        </pre>
       </aside>
     </div>
   );

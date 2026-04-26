@@ -6,7 +6,7 @@ This document captures **post-MVP** and **in-flight** product directions. For cu
 
 | Priority | Theme | Summary |
 |----------|--------|--------|
-| **P1** | UX & Polish | **Field validation** before preview; **AI assist** provider + rate limits + policy |
+| **P1** | UX & Polish | **AI assist** provider + rate limits + policy (client validation + discovery loading shipped) |
 | **P2** | Security depth | Org guardrails, deeper CIS automation, first-class **Secrets Manager / SSM** wiring (API hints + instance IAM JSON shipped) |
 | **P3** | Presets & catalogs | **Versioning** / labels, **quick-builder** stack catalog, optional **org** libraries |
 | **P4** | More frameworks / emitters | CloudFormation, Pulumi, Bicep, CDK; OpenTofu; Crossplane — **Terraform**-first today |
@@ -24,11 +24,11 @@ This document captures **post-MVP** and **in-flight** product directions. For cu
 - **Wizard read order** and **header** copy: framework → region → **optional** profile → network & compute, with **starters** and **server presets** (collapsible) after the main path.  
 - **Toolbar hint** (Import vs **Create from JSON** for server presets), **import/export** / undo / comboboxes.  
 - **AWS discovery loading:** `useAwsDiscovery` exposes `loading` / `loadingSubnets` with a short **help** line and `aria-busy` / subtle styling on comboboxes while read-only lists refresh.  
+- **Client-side validation** before preview: required fields aligned with the API’s `Validate()`, inline `aria-invalid` / error text on fields, optional format checks (SSH CIDR, security group ids, subnet/AMI prefixes when clearly wrong). Skips `/api/v1/preview` and security fetch when invalid.  
 - Build-flagged **AI assist** policy + JSON context preview only (`VITE_IAC_AI_ASSIST`); no model calls by default. See [`ai-assist.md`](ai-assist.md).
 
 **Next up**  
-- **Client-side validation** before code preview: required fields, basic format checks, inline messages (keeps bad state from hitting `/api/v1/preview` when obviously incomplete).  
-- **AI (optional):** explict provider + user-triggered “send” path, **rate limits**, product/legal sign-off.
+- **AI (optional):** explicit provider + user-triggered “send” path, **rate limits**, product/legal sign-off.
 
 ---
 
