@@ -12,6 +12,8 @@ type Props = {
   disabled?: boolean;
   /** Suggestions list is being refreshed (e.g. AWS discovery). */
   busy?: boolean;
+  /** Inline validation message (also sets aria-invalid on the input). */
+  error?: string;
   "aria-label"?: string;
 };
 
@@ -20,8 +22,10 @@ type Props = {
  */
 export function ComboboxField(p: Props) {
   const listId = useId();
+  const errId = useId();
   const dis = p.disabled === true;
   const busy = p.busy === true;
+  const err = p.error?.trim() ?? "";
   return (
     <div className="step m43-field">
       <label>{p.label}</label>
@@ -34,6 +38,8 @@ export function ComboboxField(p: Props) {
         disabled={dis}
         list={listId}
         aria-busy={busy}
+        aria-invalid={err ? true : undefined}
+        aria-describedby={err ? errId : undefined}
         aria-label={p["aria-label"] ?? p.label}
       />
       <datalist id={listId}>
@@ -41,6 +47,11 @@ export function ComboboxField(p: Props) {
           <option key={o.value} value={o.value} label={o.label} />
         ))}
       </datalist>
+      {err ? (
+        <p id={errId} className="message--error m43-message--error m43-field__error" role="alert">
+          {err}
+        </p>
+      ) : null}
     </div>
   );
 }

@@ -33,6 +33,7 @@ export default defineConfig({
         "src/ComboboxField.tsx",
         "src/credentialApi.ts",
         "src/useAwsDiscovery.ts",
+        "src/wizardValidation.ts",
       ],
       thresholds: {
         lines: 80,

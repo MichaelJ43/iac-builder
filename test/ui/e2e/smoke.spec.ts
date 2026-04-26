@@ -8,7 +8,7 @@ const minimalWizard = path.join(__dirname, "fixtures", "minimal-wizard.json");
 test("wizard shows framework step", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByRole("heading", { name: "iac-builder" })).toBeVisible();
-  await expect(page.getByText("IaC framework")).toBeVisible();
+  await expect(page.getByText("IaC framework", { exact: true })).toBeVisible();
 });
 
 test("can open code slider", async ({ page }) => {
