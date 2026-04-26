@@ -6,6 +6,8 @@ Read this file at the start of substantive work on this repository, and refresh 
 
 **iac-builder** is a learning and portfolio project: a containerized **Go API** plus **React (Vite) UI** that guides users through generating **IaC** for a narrow MVP path (**AWS EC2**), with optional **encrypted credential profiles** for discovery (VPC/subnet lists), **wizard presets**, **rule-based security hints**, and a **live code preview** panel.
 
+**Main column intent (read order):** after the **toolbar** and optional **starter** shortcut, the form runs **framework → region → (optional) AWS profile → network and compute**; **saved API presets** and **import/export preset file** sit **after** the core path so the primary journey matches the header copy. The **code** drawer is a fixed tab on the right.
+
 ## Layout
 
 - Application code: [`src/api`](src/api) (Go module `github.com/MichaelJ43/iac-builder/api`), [`src/ui`](src/ui) (TypeScript + React).
