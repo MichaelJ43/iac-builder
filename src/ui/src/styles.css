@@ -172,6 +172,15 @@ label {
   width: auto;
   margin-bottom: 0;
 }
+.toolbar-btn--danger {
+  background: var(--ib-danger-surface);
+  color: var(--ib-fg-danger);
+  border: 1px solid var(--ib-danger);
+}
+.toolbar-btn--danger:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
 .preset-compare__err {
   color: var(--ib-fg-danger);
   font-size: 0.9rem;

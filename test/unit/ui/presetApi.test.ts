@@ -1,5 +1,12 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { coerceWizardState, getPresetWizard, listPresets } from "@ui/presetApi";
+import { emptyWizardState } from "@ui/api";
+import {
+  coerceWizardState,
+  createWizardPreset,
+  deletePreset,
+  getPresetWizard,
+  listPresets,
+} from "@ui/presetApi";
 
 describe("coerceWizardState", () => {
   it("returns defaults for non-objects", () => {
@@ -148,5 +155,53 @@ describe("getPresetWizard", () => {
     expect(w.region).toBe("eu-central-1");
     expect(w.framework).toBe("terraform");
     expect(vi.mocked(fetch).mock.calls[0]?.[0]).toContain("/presets/abc");
+  });
+});
+
+describe("createWizardPreset", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("POSTs state wrapper and returns id", async () => {
+    const f = vi.fn(async () => ({
+      ok: true,
+      status: 201,
+      json: async () => ({ id: "new-1" }),
+    }));
+    vi.stubGlobal("fetch", f);
+    const id = await createWizardPreset("my-preset", emptyWizardState());
+    expect(id).toBe("new-1");
+    const arg = f.mock.calls[0]?.[1] as RequestInit;
+    expect(arg?.method).toBe("POST");
+    const body = JSON.parse(String(arg?.body));
+    expect(body.name).toBe("my-preset");
+    expect(body.data.state).toBeDefined();
+  });
+
+  it("throws when id missing", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => ({
+        ok: true,
+        status: 201,
+        json: async () => ({}),
+      }))
+    );
+    await expect(createWizardPreset("x", emptyWizardState())).rejects.toThrow(/missing id/);
+  });
+});
+
+describe("deletePreset", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("DELETEs preset", async () => {
+    const f = vi.fn(async () => ({ ok: true, status: 204 }));
+    vi.stubGlobal("fetch", f);
+    await expect(deletePreset("abc")).resolves.toBeUndefined();
+    expect(f.mock.calls[0]?.[0]).toContain("/presets/abc");
+    expect((f.mock.calls[0]?.[1] as RequestInit)?.method).toBe("DELETE");
   });
 });

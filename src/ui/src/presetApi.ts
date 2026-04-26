@@ -81,3 +81,31 @@ export async function getPresetWizard(id: string): Promise<WizardState> {
   }
   return coerceWizardState(await res.json());
 }
+
+/** Persists the current wizard as an API preset (`data` is `{ state }` for `coerceWizardState`). */
+export async function createWizardPreset(name: string, state: WizardState): Promise<string> {
+  const res = await fetch(`${base}/api/v1/presets`, {
+    ...withCredentials,
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name, data: { state } }),
+  });
+  if (!res.ok) {
+    throw new Error(await normalizeFetchError(res));
+  }
+  const data = (await res.json()) as { id?: string };
+  if (!data.id) {
+    throw new Error("missing id in response");
+  }
+  return data.id;
+}
+
+export async function deletePreset(id: string): Promise<void> {
+  const res = await fetch(`${base}/api/v1/presets/${encodeURIComponent(id)}`, {
+    ...withCredentials,
+    method: "DELETE",
+  });
+  if (!res.ok) {
+    throw new Error(await normalizeFetchError(res));
+  }
+}
