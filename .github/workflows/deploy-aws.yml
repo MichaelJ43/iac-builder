@@ -72,6 +72,8 @@ jobs:
           test -n "$AWS_DEPLOY_ROLE_ARN" || (echo "Set repository Variable or Secret AWS_DEPLOY_ROLE_ARN (IAM role ARN for OIDC)." && exit 1)
 
       - name: Build Lambda zip
+        env:
+          GOTOOLCHAIN: local
         run: |
           chmod +x "$GITHUB_WORKSPACE/scripts/build-lambda-zip.sh"
           "$GITHUB_WORKSPACE/scripts/build-lambda-zip.sh" "$GITHUB_WORKSPACE/dist/lambda.zip"
