@@ -1,4 +1,5 @@
 import { emptyWizardState, FRAMEWORK_IDS, type Framework, type WizardState } from "./api";
+import { withCredentials } from "./fetchWithCredentials";
 import { normalizeFetchError } from "./fetchUtils";
 
 const base = "";
@@ -65,7 +66,7 @@ export function coerceWizardState(raw: unknown): WizardState {
 }
 
 export async function listPresets(): Promise<PresetSummary[]> {
-  const res = await fetch(`${base}/api/v1/presets`);
+  const res = await fetch(`${base}/api/v1/presets`, withCredentials);
   if (!res.ok) {
     throw new Error(await normalizeFetchError(res));
   }
@@ -74,7 +75,7 @@ export async function listPresets(): Promise<PresetSummary[]> {
 }
 
 export async function getPresetWizard(id: string): Promise<WizardState> {
-  const res = await fetch(`${base}/api/v1/presets/${encodeURIComponent(id)}`);
+  const res = await fetch(`${base}/api/v1/presets/${encodeURIComponent(id)}`, withCredentials);
   if (!res.ok) {
     throw new Error(await normalizeFetchError(res));
   }

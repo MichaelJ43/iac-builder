@@ -1,3 +1,4 @@
+import { withCredentials } from "./fetchWithCredentials";
 import { normalizeFetchError } from "./fetchUtils";
 
 const base = "";
@@ -55,6 +56,7 @@ export function emptyWizardState(): WizardState {
 
 export async function preview(state: WizardState): Promise<Record<string, string>> {
   const res = await fetch(`${base}/api/v1/preview`, {
+    ...withCredentials,
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ state }),
@@ -74,6 +76,7 @@ export type SecurityRecommendation = {
 
 export async function securityRecommendations(state: WizardState): Promise<SecurityRecommendation[]> {
   const res = await fetch(`${base}/api/v1/security/recommendations`, {
+    ...withCredentials,
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ state }),

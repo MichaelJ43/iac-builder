@@ -8,6 +8,7 @@ import (
 	"os"
 	"sync"
 
+	"github.com/MichaelJ43/iac-builder/api/internal/auth"
 	"github.com/MichaelJ43/iac-builder/api/internal/crypto"
 	"github.com/MichaelJ43/iac-builder/api/internal/gen"
 	"github.com/MichaelJ43/iac-builder/api/internal/httpapi"
@@ -68,7 +69,7 @@ func initHandler() {
 		if ver == "" {
 			ver = "0.0.0-lambda"
 		}
-		srv := &httpapi.Server{Reg: reg, Store: st, Version: ver}
+		srv := &httpapi.Server{Reg: reg, Store: st, Version: ver, Auth: auth.FromEnv()}
 		handler = &albHandler{h: srv.Handler()}
 	})
 }

@@ -1,9 +1,19 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
 import type { Framework, SecurityRecommendation, WizardState } from "./api";
 import { emptyWizardState, preview, securityRecommendations } from "./api";
+import { AWS_REGIONS, INSTANCE_TYPE_SUGGESTIONS } from "./awsConstants";
+import { ComboboxField } from "./ComboboxField";
+import {
+  createCredentialProfile,
+  fetchAuthStatus,
+  listCredentialProfiles,
+  type AuthStatus,
+  type ProfileSummary,
+} from "./credentialApi";
 import { errorMessageFromUnknown } from "./fetchUtils";
 import { PresetDiffTable } from "./PresetDiffTable";
 import { getPresetWizard, listPresets, type PresetSummary } from "./presetApi";
+import { useAwsDiscovery } from "./useAwsDiscovery";
 import { useWizardUndoState } from "./useWizardUndoState";
 import {
   buildWizardExport,
@@ -46,6 +56,17 @@ export function App() {
     [selectedStarterId]
   );
 
+  const [authStatus, setAuthStatus] = useState<AuthStatus | null>(null);
+  const [profiles, setProfiles] = useState<ProfileSummary[]>([]);
+  const [profileListErr, setProfileListErr] = useState<string | null>(null);
+  const [selectedProfileId, setSelectedProfileId] = useState("");
+  const [npName, setNpName] = useState("");
+  const [npRegion, setNpRegion] = useState("");
+  const [npAk, setNpAk] = useState("");
+  const [npSk, setNpSk] = useState("");
+  const [profileFormErr, setProfileFormErr] = useState<string | null>(null);
+  const [profileSaveBusy, setProfileSaveBusy] = useState(false);
+
   useEffect(() => {
     let cancelled = false;
     void (async () => {
@@ -78,11 +99,85 @@ export function App() {
     };
   }, []);
 
+  useEffect(() => {
+    void (async () => {
+      try {
+        const a = await fetchAuthStatus();
+        setAuthStatus(a);
+      } catch {
+        setAuthStatus({ kind: "disabled" });
+      }
+    })();
+  }, []);
+
+  useEffect(() => {
+    if (authStatus === null) {
+      return;
+    }
+    if (authStatus.kind === "signedOut") {
+      setProfiles([]);
+      setProfileListErr(null);
+      setSelectedProfileId("");
+      return;
+    }
+    let cancelled = false;
+    void (async () => {
+      try {
+        const list = await listCredentialProfiles();
+        if (!cancelled) {
+          setProfiles(list);
+          setProfileListErr(null);
+        }
+      } catch (e) {
+        if (!cancelled) {
+          setProfileListErr(errorMessageFromUnknown(e));
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [authStatus]);
+
+  const discovery = useAwsDiscovery(selectedProfileId, state.region, state.vpc_id);
+
+  const regionOpts = useMemo(() => AWS_REGIONS.map((v) => ({ value: v })), []);
+  const vpcOpts = useMemo(
+    () =>
+      discovery.vpcs.map((v) => ({
+        value: v.id,
+        label: v.is_default ? `${v.id} (default VPC)` : v.id,
+      })),
+    [discovery.vpcs]
+  );
+  const subnetOpts = useMemo(
+    () => discovery.subnets.map((s) => ({ value: s.id, label: `${s.id} (${s.az})` })),
+    [discovery.subnets]
+  );
+  const instOpts = useMemo(() => INSTANCE_TYPE_SUGGESTIONS.map((v) => ({ value: v })), []);
+  const amiOpts = useMemo(
+    () => discovery.amis.map((a) => ({ value: a.id, label: `${a.id} — ${a.name}` })),
+    [discovery.amis]
+  );
+  const keyOpts = useMemo(
+    () => discovery.keyPairs.map((k) => ({ value: k.name })),
+    [discovery.keyPairs]
+  );
+  const sgOpts = useMemo(
+    () =>
+      discovery.securityGroups.map((g) => ({
+        value: g.id,
+        label: g.name ? `${g.id} (${g.name})` : g.id,
+      })),
+    [discovery.securityGroups]
+  );
+
   const canShowCloud = state.framework !== "";
   const canShowRegion = canShowCloud;
   const canShowNetwork = state.region.trim() !== "";
-  // Subnet is required for this EC2 template; VPC is optional (only used in Terraform comments / hints).
   const canShowCompute = state.subnet_id.trim() !== "";
+  const canSaveProfile =
+    authStatus !== null && (authStatus.kind === "disabled" || authStatus.kind === "signedIn");
 
   const readyForPreview =
     state.framework &&
@@ -121,6 +216,38 @@ export function App() {
     () => state.security_group_ids.join(","),
     [state.security_group_ids]
   );
+
+  const saveNewProfile = useCallback(() => {
+    if (!canSaveProfile) {
+      return;
+    }
+    setProfileFormErr(null);
+    if (!npName.trim() || !npRegion.trim() || !npAk.trim() || !npSk.trim()) {
+      setProfileFormErr("Name, default region, access key, and secret are required.");
+      return;
+    }
+    setProfileSaveBusy(true);
+    void (async () => {
+      try {
+        const id = await createCredentialProfile({
+          name: npName.trim(),
+          default_region: npRegion.trim(),
+          access_key_id: npAk,
+          secret_access_key: npSk,
+        });
+        setNpAk("");
+        setNpSk("");
+        setNpName("");
+        setSelectedProfileId(id);
+        const list = await listCredentialProfiles();
+        setProfiles(list);
+      } catch (e) {
+        setProfileFormErr(errorMessageFromUnknown(e));
+      } finally {
+        setProfileSaveBusy(false);
+      }
+    })();
+  }, [canSaveProfile, npAk, npName, npRegion, npSk]);
 
   const exportConfiguration = useCallback(() => {
     setImportErr(null);
@@ -304,11 +431,114 @@ export function App() {
           )}
         </div>
 
+        {authStatus?.kind === "signedOut" && (
+          <p className="help">
+            <strong>AWS discovery</strong> and saving credential profiles to this app require a session. Use{" "}
+            <strong>Log in</strong> in the top bar, then return here. You can still type resource IDs by hand
+            without logging in.
+          </p>
+        )}
+
+        {authStatus !== null && (authStatus.kind === "disabled" || authStatus.kind === "signedIn") && (
+          <div className={fieldClass}>
+            <label>AWS credential profile (API)</label>
+            <p className="help">
+              Keys are <strong>encrypted on the server</strong> and never shown again. Select a profile to
+              auto-suggest VPCs, subnets, and related IDs for the region. You can always type custom values; lists
+              are optional hints.
+            </p>
+            {profileListErr && <p className={errorClass}>{profileListErr}</p>}
+            {discovery.error && <p className={errorClass}>{discovery.error}</p>}
+            <div className="preset-compare__row">
+              <select
+                className={inputClass}
+                value={selectedProfileId}
+                onChange={(e) => {
+                  const id = e.target.value;
+                  setSelectedProfileId(id);
+                  if (!id) {
+                    return;
+                  }
+                  const p = profiles.find((x) => x.id === id);
+                  if (p?.default_region) {
+                    setState((s) => ({
+                      ...s,
+                      region: s.region.trim() ? s.region : p.default_region!,
+                    }));
+                  }
+                }}
+                aria-label="Saved AWS credential profile"
+              >
+                <option value="">No profile (manual IDs only)</option>
+                {profiles.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name} ({p.default_region || "—"})
+                  </option>
+                ))}
+              </select>
+            </div>
+            <p className="help">Add a new encrypted profile (same API as the CLI):</p>
+            <div className="preset-compare__row" style={{ flexWrap: "wrap", gap: "0.5rem" }}>
+              <input
+                className={inputClass}
+                value={npName}
+                onChange={(e) => setNpName(e.target.value)}
+                placeholder="Profile name"
+                aria-label="New profile name"
+                disabled={!canSaveProfile || profileSaveBusy}
+              />
+              <input
+                className={inputClass}
+                value={npRegion}
+                onChange={(e) => setNpRegion(e.target.value)}
+                placeholder="Default region (e.g. us-east-1)"
+                aria-label="Default region for new profile"
+                disabled={!canSaveProfile || profileSaveBusy}
+              />
+            </div>
+            <div className="preset-compare__row" style={{ flexWrap: "wrap", gap: "0.5rem" }}>
+              <input
+                className={inputClass}
+                value={npAk}
+                onChange={(e) => setNpAk(e.target.value)}
+                placeholder="Access key ID"
+                autoComplete="off"
+                aria-label="AWS access key id"
+                disabled={!canSaveProfile || profileSaveBusy}
+              />
+              <input
+                className={inputClass}
+                type="password"
+                value={npSk}
+                onChange={(e) => setNpSk(e.target.value)}
+                placeholder="Secret access key"
+                autoComplete="off"
+                aria-label="AWS secret access key"
+                disabled={!canSaveProfile || profileSaveBusy}
+              />
+              <button
+                type="button"
+                className={toolbarButtonClass}
+                onClick={saveNewProfile}
+                disabled={!canSaveProfile || profileSaveBusy}
+              >
+                {profileSaveBusy ? "Saving…" : "Save profile"}
+              </button>
+            </div>
+            {profileFormErr && <p className={errorClass}>{profileFormErr}</p>}
+            {authStatus.kind === "signedIn" && (
+              <p className="help">
+                Signed in as <code>{authStatus.userId}</code> — profiles are scoped to your account.
+              </p>
+            )}
+          </div>
+        )}
+
         <p className="help">
           This flow targets a single <code>aws_instance</code> (or equivalent) in one region.{" "}
           <strong>Subnet</strong> is required so the instance has a network placement.{" "}
-          <strong>VPC</strong> is optional here—Terraform still works without it; we only use it for
-          comments and discovery context. Other resource types would skip subnet entirely; this MVP is EC2-only.
+          <strong>VPC</strong> is optional in generated Terraform; choosing one unlocks better subnet and security
+          group suggestions.
         </p>
         {err && <p className={errorClass}>{err}</p>}
 
@@ -318,9 +548,7 @@ export function App() {
             className={inputClass}
             aria-label="IaC framework"
             value={state.framework}
-            onChange={(e) =>
-              setState((s) => ({ ...s, framework: e.target.value as Framework }))
-            }
+            onChange={(e) => setState((s) => ({ ...s, framework: e.target.value as Framework }))}
           >
             <option value="">Select…</option>
             {frameworks.map((f) => (
@@ -345,82 +573,85 @@ export function App() {
         )}
 
         {canShowRegion && (
-          <div className={fieldClass}>
-            <label>Region</label>
-            <input
-              className={inputClass}
-              value={state.region}
-              onChange={(e) => setState((s) => ({ ...s, region: e.target.value }))}
-              placeholder="us-east-1"
-            />
-          </div>
+          <ComboboxField
+            label="Region"
+            value={state.region}
+            onChange={(v) => setState((s) => ({ ...s, region: v }))}
+            suggestions={regionOpts}
+            placeholder="us-east-1"
+            help={<>Type any region; the list is a shortcut for common values.</>}
+            aria-label="AWS region"
+          />
         )}
 
         {canShowNetwork && (
           <>
-            <div className={fieldClass}>
-              <label>Subnet ID</label>
-              <p className="help">
-                Required for EC2: the subnet must live in <strong>{state.region || "your region"}</strong>.
-                Example shape: <code>subnet-0abc123def4567890</code>. From AWS Console: VPC → Subnets → copy subnet ID.
-                If you use a credential profile in the API, you can list subnets after validating the profile.
-              </p>
-              <input
-                className={inputClass}
-                value={state.subnet_id}
-                onChange={(e) => setState((s) => ({ ...s, subnet_id: e.target.value }))}
-                placeholder="subnet-..."
-              />
-            </div>
-            <div className={fieldClass}>
-              <label>VPC ID (optional)</label>
-              <p className="help">
-                Optional. Adds a comment in generated Terraform linking the subnet to a VPC for humans
-                reviewing the file—not required for <code>terraform apply</code> when <code>subnet_id</code> is set.
-                If <strong>Show code</strong> is open, it can sit on top of this area—close it or scroll to see this field.
-              </p>
-              <input
-                className={inputClass}
-                value={state.vpc_id}
-                onChange={(e) => setState((s) => ({ ...s, vpc_id: e.target.value }))}
-                placeholder="vpc-... (optional)"
-              />
-            </div>
+            <ComboboxField
+              label="VPC ID (optional)"
+              value={state.vpc_id}
+              onChange={(v) => setState((s) => ({ ...s, vpc_id: v }))}
+              suggestions={vpcOpts}
+              placeholder="vpc-... (optional)"
+              help={
+                selectedProfileId ? (
+                  <>
+                    Suggested VPCs in <strong>{state.region || "this region"}</strong> (read-only API). Choose a VPC
+                    to filter subnets and security groups, or type any ID.
+                  </>
+                ) : (
+                  "Select a credential profile above to load suggestions, or type a VPC id manually."
+                )
+              }
+              aria-label="VPC ID"
+            />
+            <ComboboxField
+              label="Subnet ID"
+              value={state.subnet_id}
+              onChange={(v) => setState((s) => ({ ...s, subnet_id: v }))}
+              suggestions={subnetOpts}
+              placeholder="subnet-..."
+              help={
+                <>
+                  Required for EC2. With a <strong>VPC</strong> and profile, we list subnets in that VPC; you can
+                  still paste a subnet from another VPC if you need to.
+                </>
+              }
+              aria-label="Subnet ID"
+            />
           </>
         )}
 
         {canShowCompute && (
           <>
-            <div className={fieldClass}>
-              <label>Instance type</label>
-              <input
-                className={inputClass}
-                value={state.instance_type}
-                onChange={(e) =>
-                  setState((s) => ({ ...s, instance_type: e.target.value }))
-                }
-                placeholder="t3.micro"
-              />
-            </div>
-            <div className={fieldClass}>
-              <label>AMI ID</label>
-              <input
-                className={inputClass}
-                value={state.ami}
-                onChange={(e) => setState((s) => ({ ...s, ami: e.target.value }))}
-                placeholder="ami-..."
-              />
-            </div>
-            <div className={fieldClass}>
-              <label>Key name (optional)</label>
-              <input
-                className={inputClass}
-                value={state.key_name}
-                onChange={(e) => setState((s) => ({ ...s, key_name: e.target.value }))}
-              />
-            </div>
+            <ComboboxField
+              label="Instance type"
+              value={state.instance_type}
+              onChange={(v) => setState((s) => ({ ...s, instance_type: v }))}
+              suggestions={instOpts}
+              placeholder="t3.micro"
+              help="Pick a common size or type your own (must exist in the region / account limits)."
+              aria-label="Instance type"
+            />
+            <ComboboxField
+              label="AMI ID"
+              value={state.ami}
+              onChange={(v) => setState((s) => ({ ...s, ami: v }))}
+              suggestions={amiOpts}
+              placeholder="ami-..."
+              help="Latest Amazon Linux suggestions load when a profile is selected; you can use any machine image id."
+              aria-label="AMI id"
+            />
+            <ComboboxField
+              label="Key name (optional)"
+              value={state.key_name}
+              onChange={(v) => setState((s) => ({ ...s, key_name: v }))}
+              suggestions={keyOpts}
+              help="EC2 key pairs in this region, or a custom name."
+              aria-label="Key pair name"
+            />
             <div className={fieldClass}>
               <label>Security group IDs (comma-separated)</label>
+              <p className="help">Suggestions are per-VPC when a profile and VPC are set. Separate multiple IDs with commas.</p>
               <input
                 className={inputClass}
                 value={sgText}
@@ -433,16 +664,21 @@ export function App() {
                       .filter(Boolean),
                   }))
                 }
+                list="ib-sg-suggest"
+                aria-label="Security group ids"
               />
+              <datalist id="ib-sg-suggest">
+                {sgOpts.map((o) => (
+                  <option key={o.value} value={o.value} />
+                ))}
+              </datalist>
             </div>
             <div className={fieldClass}>
               <label>
                 <input
                   type="checkbox"
                   checked={state.associate_public_ip}
-                  onChange={(e) =>
-                    setState((s) => ({ ...s, associate_public_ip: e.target.checked }))
-                  }
+                  onChange={(e) => setState((s) => ({ ...s, associate_public_ip: e.target.checked }))}
                 />{" "}
                 Associate public IP
               </label>
@@ -452,30 +688,31 @@ export function App() {
                 <input
                   type="checkbox"
                   checked={state.imdsv2_required}
-                  onChange={(e) =>
-                    setState((s) => ({ ...s, imdsv2_required: e.target.checked }))
-                  }
+                  onChange={(e) => setState((s) => ({ ...s, imdsv2_required: e.target.checked }))}
                 />{" "}
                 Require IMDSv2
               </label>
             </div>
-            <div className={fieldClass}>
-              <label>SSH CIDR (for guidance)</label>
-              <input
-                className={inputClass}
-                value={state.ssh_cidr}
-                onChange={(e) => setState((s) => ({ ...s, ssh_cidr: e.target.value }))}
-                placeholder="203.0.113.10/32"
-              />
-            </div>
+            <ComboboxField
+              label="SSH CIDR (for guidance)"
+              value={state.ssh_cidr}
+              onChange={(v) => setState((s) => ({ ...s, ssh_cidr: v }))}
+              suggestions={[
+                { value: "0.0.0.0/0" },
+                { value: "10.0.0.0/8" },
+                { value: "172.16.0.0/12" },
+                { value: "192.168.0.0/16" },
+              ]}
+              placeholder="203.0.113.10/32"
+              help="Used only for security hints, not in all templates."
+              aria-label="SSH CIDR for guidance"
+            />
             <div className={fieldClass}>
               <label>
                 <input
                   type="checkbox"
                   checked={state.enable_ebs_encryption}
-                  onChange={(e) =>
-                    setState((s) => ({ ...s, enable_ebs_encryption: e.target.checked }))
-                  }
+                  onChange={(e) => setState((s) => ({ ...s, enable_ebs_encryption: e.target.checked }))}
                 />{" "}
                 Encrypt root EBS
               </label>

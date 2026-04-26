@@ -6,7 +6,7 @@ WORKDIR="$(mktemp -d)"
 trap 'rm -rf "$WORKDIR"' EXIT
 (
   cd "$ROOT/src/api"
-  GOOS=linux GOARCH=arm64 CGO_ENABLED=0 GOSUMDB=off go build -o "$WORKDIR/bootstrap" ./cmd/lambda
+  GOOS=linux GOARCH=arm64 CGO_ENABLED=0 GOSUMDB=off GOTOOLCHAIN=local go build -o "$WORKDIR/bootstrap" ./cmd/lambda
 )
 mkdir -p "$(dirname "$OUT")"
 (

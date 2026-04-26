@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/MichaelJ43/iac-builder/api/internal/auth"
 	"github.com/MichaelJ43/iac-builder/api/internal/crypto"
 	"github.com/MichaelJ43/iac-builder/api/internal/gen"
 	"github.com/MichaelJ43/iac-builder/api/internal/httpapi"
@@ -38,7 +39,7 @@ func main() {
 	if ver == "" {
 		ver = "0.0.0-dev"
 	}
-	srv := &httpapi.Server{Reg: reg, Store: st, Version: ver}
+	srv := &httpapi.Server{Reg: reg, Store: st, Version: ver, Auth: auth.FromEnv()}
 	addr := ":8080"
 	if v := os.Getenv("LISTEN_ADDR"); v != "" {
 		addr = v

@@ -3,17 +3,11 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { App } from "@ui/App";
+import { createAppFetchMock } from "./testFetchMock";
 
 describe("App undo toolbar", () => {
   beforeEach(() => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async () => ({
-        ok: true,
-        json: async () => ({ files: {}, recommendations: [] }),
-        text: async () => "",
-      }))
-    );
+    vi.stubGlobal("fetch", createAppFetchMock());
   });
   afterEach(() => {
     vi.unstubAllGlobals();

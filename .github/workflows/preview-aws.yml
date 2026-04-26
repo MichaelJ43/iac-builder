@@ -47,7 +47,7 @@ jobs:
 
       - uses: actions/setup-go@v5
         with:
-          go-version: "1.22.x"
+          go-version: "1.24.x"
 
       - uses: hashicorp/setup-terraform@v3
         with:
@@ -68,6 +68,8 @@ jobs:
           test -n "$TF_ROUTE53_HOSTED_ZONE_ID" || (echo "Set repository Secret TF_ROUTE53_HOSTED_ZONE_ID." && exit 1)
 
       - name: Build Lambda zip
+        env:
+          GOTOOLCHAIN: local
         run: |
           chmod +x "$GITHUB_WORKSPACE/scripts/build-lambda-zip.sh"
           "$GITHUB_WORKSPACE/scripts/build-lambda-zip.sh" "$GITHUB_WORKSPACE/dist/lambda.zip"
@@ -198,7 +200,7 @@ jobs:
 
       - uses: actions/setup-go@v5
         with:
-          go-version: "1.22.x"
+          go-version: "1.24.x"
 
       - uses: hashicorp/setup-terraform@v3
         with:
@@ -219,6 +221,8 @@ jobs:
           test -n "$TF_ROUTE53_HOSTED_ZONE_ID" || (echo "Set repository Secret TF_ROUTE53_HOSTED_ZONE_ID." && exit 1)
 
       - name: Build throwaway Lambda zip
+        env:
+          GOTOOLCHAIN: local
         run: |
           chmod +x "$GITHUB_WORKSPACE/scripts/build-lambda-zip.sh"
           "$GITHUB_WORKSPACE/scripts/build-lambda-zip.sh" "$GITHUB_WORKSPACE/dist/lambda.zip"

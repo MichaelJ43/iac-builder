@@ -31,23 +31,107 @@ func OpenSQLite(dsn string, masterKey []byte) (*Store, error) {
 }
 
 func (s *Store) migrate() error {
-	_, err := s.db.Exec(`
-CREATE TABLE IF NOT EXISTS credential_profiles (
-  id TEXT PRIMARY KEY,
-  name TEXT NOT NULL UNIQUE,
-  cloud TEXT NOT NULL,
-  default_region TEXT,
-  secret_blob BLOB NOT NULL,
-  created_at TEXT NOT NULL
-);
+	if _, err := s.db.Exec(`
 CREATE TABLE IF NOT EXISTS wizard_presets (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL UNIQUE,
   json_data TEXT NOT NULL,
   created_at TEXT NOT NULL
 );
+`); err != nil {
+		return err
+	}
+	return s.migrateCredentialProfiles()
+}
+
+func (s *Store) migrateCredentialProfiles() error {
+	var n int
+	if err := s.db.QueryRow(`SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='credential_profiles'`).Scan(&n); err != nil {
+		return err
+	}
+	if n == 0 {
+		_, err := s.db.Exec(`
+CREATE TABLE credential_profiles (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  cloud TEXT NOT NULL,
+  default_region TEXT,
+  secret_blob BLOB NOT NULL,
+  created_at TEXT NOT NULL,
+  user_id TEXT NOT NULL DEFAULT '',
+  UNIQUE(user_id, name)
+);
 `)
-	return err
+		return err
+	}
+	ok, err := s.columnExists("credential_profiles", "user_id")
+	if err != nil {
+		return err
+	}
+	if ok {
+		return nil
+	}
+	return s.rebuildCredentialProfilesForUserID()
+}
+
+func (s *Store) columnExists(table, col string) (bool, error) {
+	if table != "credential_profiles" {
+		return false, errors.New("unsupported table")
+	}
+	rows, err := s.db.Query(`PRAGMA table_info(credential_profiles)`)
+	if err != nil {
+		return false, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var cid int
+		var name, ctype string
+		var notnull, pk int
+		var dflt sql.NullString
+		if err := rows.Scan(&cid, &name, &ctype, &notnull, &dflt, &pk); err != nil {
+			return false, err
+		}
+		if name == col {
+			return true, nil
+		}
+	}
+	return false, rows.Err()
+}
+
+func (s *Store) rebuildCredentialProfilesForUserID() error {
+	tx, err := s.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer func() { _ = tx.Rollback() }()
+	if _, err := tx.Exec(`
+CREATE TABLE credential_profiles_new (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  cloud TEXT NOT NULL,
+  default_region TEXT,
+  secret_blob BLOB NOT NULL,
+  created_at TEXT NOT NULL,
+  user_id TEXT NOT NULL DEFAULT '',
+  UNIQUE(user_id, name)
+);
+`); err != nil {
+		return err
+	}
+	if _, err := tx.Exec(`
+INSERT INTO credential_profiles_new (id, name, cloud, default_region, secret_blob, created_at, user_id)
+SELECT id, name, cloud, default_region, secret_blob, created_at, ''
+FROM credential_profiles;
+`); err != nil {
+		return err
+	}
+	if _, err := tx.Exec(`DROP TABLE credential_profiles`); err != nil {
+		return err
+	}
+	if _, err := tx.Exec(`ALTER TABLE credential_profiles_new RENAME TO credential_profiles`); err != nil {
+		return err
+	}
+	return tx.Commit()
 }
 
 func (s *Store) Close() error { return s.db.Close() }
@@ -57,7 +141,8 @@ type AWSCreds struct {
 	SecretAccessKey string `json:"secret_access_key"`
 }
 
-func (s *Store) CreateProfile(ctx context.Context, name, cloud, defaultRegion string, creds AWSCreds) (id string, err error) {
+// CreateProfile stores encrypted AWS credentials. userID is the platform subject; use "" when auth is off (legacy/local).
+func (s *Store) CreateProfile(ctx context.Context, userID, name, cloud, defaultRegion string, creds AWSCreds) (id string, err error) {
 	if s.key == nil {
 		return "", errors.New("store not configured with master key")
 	}
@@ -68,14 +153,23 @@ func (s *Store) CreateProfile(ctx context.Context, name, cloud, defaultRegion st
 	}
 	id = uuid.New().String()
 	_, err = s.db.ExecContext(ctx,
-		`INSERT INTO credential_profiles(id,name,cloud,default_region,secret_blob,created_at) VALUES(?,?,?,?,?,?)`,
-		id, name, cloud, defaultRegion, blob, time.Now().UTC().Format(time.RFC3339),
+		`INSERT INTO credential_profiles(id,name,cloud,default_region,secret_blob,created_at,user_id) VALUES(?,?,?,?,?,?,?)`,
+		id, name, cloud, defaultRegion, blob, time.Now().UTC().Format(time.RFC3339), userID,
 	)
 	return id, err
 }
 
-func (s *Store) ListProfiles(ctx context.Context) ([]ProfileSummary, error) {
-	rows, err := s.db.QueryContext(ctx, `SELECT id,name,cloud,default_region,created_at FROM credential_profiles ORDER BY name`)
+// ListProfiles returns profiles for one user, or all rows when allUsers is true (auth disabled / admin tooling).
+func (s *Store) ListProfiles(ctx context.Context, userID string, allUsers bool) ([]ProfileSummary, error) {
+	var (
+		rows *sql.Rows
+		err  error
+	)
+	if allUsers {
+		rows, err = s.db.QueryContext(ctx, `SELECT id,name,cloud,default_region,created_at FROM credential_profiles ORDER BY name`)
+	} else {
+		rows, err = s.db.QueryContext(ctx, `SELECT id,name,cloud,default_region,created_at FROM credential_profiles WHERE user_id = ? ORDER BY name`, userID)
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -99,10 +193,20 @@ type ProfileSummary struct {
 	CreatedAt      string `json:"created_at"`
 }
 
-func (s *Store) GetAWSCreds(ctx context.Context, id string) (AWSCreds, string, error) {
-	var blob []byte
-	var region string
-	err := s.db.QueryRowContext(ctx, `SELECT secret_blob, default_region FROM credential_profiles WHERE id=?`, id).Scan(&blob, &region)
+// GetAWSCreds returns decrypted creds. When enforceUser is true, the profile must belong to userID.
+func (s *Store) GetAWSCreds(ctx context.Context, id, userID string, enforceUser bool) (AWSCreds, string, error) {
+	var (
+		blob   []byte
+		region string
+		err    error
+	)
+	if enforceUser {
+		err = s.db.QueryRowContext(ctx,
+			`SELECT secret_blob, default_region FROM credential_profiles WHERE id=? AND user_id=?`, id, userID,
+		).Scan(&blob, &region)
+	} else {
+		err = s.db.QueryRowContext(ctx, `SELECT secret_blob, default_region FROM credential_profiles WHERE id=?`, id).Scan(&blob, &region)
+	}
 	if err != nil {
 		return AWSCreds{}, "", err
 	}

@@ -30,6 +30,9 @@ export default defineConfig({
         "src/flags.ts",
         "src/PresetDiffTable.tsx",
         "src/fetchUtils.ts",
+        "src/ComboboxField.tsx",
+        "src/credentialApi.ts",
+        "src/useAwsDiscovery.ts",
       ],
       thresholds: {
         lines: 80,

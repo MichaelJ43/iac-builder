@@ -54,7 +54,7 @@ jobs:
 
       - uses: actions/setup-go@v5
         with:
-          go-version: "1.22.x"
+          go-version: "1.24.x"
 
       - uses: hashicorp/setup-terraform@v3
         with:
@@ -72,6 +72,8 @@ jobs:
           test -n "$AWS_DEPLOY_ROLE_ARN" || (echo "Set repository Variable or Secret AWS_DEPLOY_ROLE_ARN (IAM role ARN for OIDC)." && exit 1)
 
       - name: Build Lambda zip
+        env:
+          GOTOOLCHAIN: local
         run: |
           chmod +x "$GITHUB_WORKSPACE/scripts/build-lambda-zip.sh"
           "$GITHUB_WORKSPACE/scripts/build-lambda-zip.sh" "$GITHUB_WORKSPACE/dist/lambda.zip"
