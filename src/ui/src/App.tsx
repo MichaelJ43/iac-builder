@@ -38,6 +38,7 @@ export function App() {
   const { state, setWizard: setState, replaceWithState, undo, redo, canUndo, canRedo } =
     useWizardUndoState(emptyWizardState());
   const importFileRef = useRef<HTMLInputElement | null>(null);
+  const presetImportFileRef = useRef<HTMLInputElement | null>(null);
   const [importErr, setImportErr] = useState<string | null>(null);
   const [sliderOpen, setSliderOpen] = useState(false);
   const [previewText, setPreviewText] = useState("");
@@ -317,6 +318,43 @@ export function App() {
     })();
   }, [newPresetName, state, refreshPresets]);
 
+  const onPresetImportFileChange = useCallback(
+    (e: ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      e.target.value = "";
+      if (!file) {
+        return;
+      }
+      setPresetActionErr(null);
+      setPresetSaveBusy(true);
+      void (async () => {
+        try {
+          const text = await readFileAsText(file);
+          const w = parseWizardImport(text);
+          const fromField = newPresetName.trim();
+          const base = file.name.replace(/[/\\]/g, "/").split("/").pop() ?? file.name;
+          const fromFile = base.replace(/\.json$/i, "").trim();
+          const name = fromField || fromFile;
+          if (!name) {
+            setPresetActionErr(
+              "Enter a name in the field, or choose a .json file whose name can be used as the preset name (e.g. my-preset.json)."
+            );
+            return;
+          }
+          const id = await createWizardPreset(name, w);
+          setNewPresetName("");
+          await refreshPresets();
+          setSelectedPresetId(id);
+        } catch (err) {
+          setPresetActionErr(errorMessageFromUnknown(err));
+        } finally {
+          setPresetSaveBusy(false);
+        }
+      })();
+    },
+    [newPresetName, refreshPresets]
+  );
+
   const deleteSelectedPreset = useCallback(() => {
     if (!selectedPresetId) {
       return;
@@ -480,8 +518,8 @@ export function App() {
           <label>Saved API presets</label>
           <p className="help">
             Presets are stored on the server. <strong>Load into wizard</strong> replaces your answers (Undo
-            reverts). <strong>Set baseline</strong> diffs without changing the form. <strong>Download as JSON</strong>{" "}
-            uses the same file shape as <strong>Export configuration</strong> for sharing. <strong>Delete</strong>{" "}
+            reverts). <strong>Set baseline</strong> diffs without changing the form.             <strong>Download as JSON</strong> uses the same file shape as <strong>Export configuration</strong> for
+            sharing. <strong>Create from JSON file</strong> uploads a v1 file to the API. <strong>Delete</strong>{" "}
             removes a preset from the API.
           </p>
           {presetListErr && <p className="preset-compare__err m43-message--error">{presetListErr}</p>}
@@ -559,7 +597,11 @@ export function App() {
               {presetDeleteBusy ? "Deleting…" : "Delete preset"}
             </button>
           </div>
-          <p className="help">Create a new preset from the current wizard (same fields the API stores for diffs):</p>
+          <p className="help">
+            Create a new preset from the <strong>current wizard</strong> or a <strong>v1 JSON file</strong> (export /
+            download format). The name field is optional for file import: if empty, the file’s basename (without{" "}
+            <code>.json</code>) is used.
+          </p>
           <div className="preset-compare__row">
             <input
               className={inputClass}
@@ -573,6 +615,15 @@ export function App() {
               aria-label="Name for new server preset"
               disabled={presetSaveBusy}
             />
+            <input
+              id="preset-import-json"
+              ref={presetImportFileRef}
+              type="file"
+              accept="application/json,.json"
+              className="visually-hidden"
+              tabIndex={-1}
+              onChange={onPresetImportFileChange}
+            />
             <button
               type="button"
               className={toolbarButtonClass}
@@ -580,6 +631,15 @@ export function App() {
               onClick={saveCurrentAsPreset}
             >
               {presetSaveBusy ? "Saving…" : "Save to API as preset"}
+            </button>
+            <button
+              type="button"
+              className={toolbarButtonClass}
+              disabled={presetSaveBusy}
+              onClick={() => presetImportFileRef.current?.click()}
+              aria-label="Create API preset from a v1 JSON file on your device"
+            >
+              {presetSaveBusy ? "Saving…" : "Create from JSON file"}
             </button>
           </div>
           {presetCompareErr && <p className="preset-compare__err m43-message--error">{presetCompareErr}</p>}
