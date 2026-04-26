@@ -37,7 +37,7 @@ All tokens are defined on `:root` in `styles.css` with the prefix `--ib-` (short
 ## Spacing and layout
 
 - **Layout grid:** 4px base. Prefer `0.25rem` / `0.5rem` / `0.75rem` / `1rem` / `1.5rem` for gaps and padding. The main column caps at `720px` (readable line length for prose + forms).
-- **Code drawer:** Fixed `380px` width on large screens; full width on narrow viewports. The canvas adds right padding when the drawer is open so fields are not obscured (see `.layout--sliderOpen`).
+- **Code drawer:** Fixed `380px` width on large screens; full width on narrow viewports. The panel is a fixed overlay (`.slider`) so the main column keeps its normal width; it may cover the right edge of the page when open.
 
 ## Components (patterns)
 
