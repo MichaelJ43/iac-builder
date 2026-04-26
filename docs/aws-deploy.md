@@ -56,6 +56,36 @@ You do **not** need `ALB_CERTIFICATE_ARN` or `API_PUBLIC_HOSTNAME` when using th
 
 The **Destroy AWS** workflow uses the same `TF_*` values so destroy matches state. Manual `terraform apply` can use `-var=custom_domain=...`, `-var=acm_certificate_arn=...`, and `-var=route53_hosted_zone_id=...` (optional).
 
+## PR previews
+
+The **Preview AWS** workflow creates a full temporary stack for each same-repository pull request and destroys it when the PR closes. Forked PRs are skipped so untrusted code cannot assume the AWS OIDC role.
+
+Preview hostnames are derived from **Variable** `TF_CUSTOM_DOMAIN`:
+
+- Site: `pr-<number>.<TF_CUSTOM_DOMAIN>` (for example `pr-123.iacbuilder.michaelj43.dev`)
+- API origin: `api-pr-<number>.<TF_CUSTOM_DOMAIN>` (for example `api-pr-123.iacbuilder.michaelj43.dev`)
+
+For `TF_CUSTOM_DOMAIN=iacbuilder.michaelj43.dev`, an ACM certificate covering `iacbuilder.michaelj43.dev` and `*.iacbuilder.michaelj43.dev` covers both production and preview names. The same **Secret** `TF_ROUTE53_HOSTED_ZONE_ID` creates the CloudFront alias and ALB alias records for each preview.
+
+Required repository configuration:
+
+- **Variable or Secret** `AWS_DEPLOY_ROLE_ARN`
+- **Variable or Secret** `TF_STATE_BUCKET`
+- **Variable** `TF_CUSTOM_DOMAIN`
+- **Secret** `TF_ACM_CERTIFICATE_ARN`
+- **Secret** `TF_ROUTE53_HOSTED_ZONE_ID`
+- Optional **Variable** `AWS_REGION` (defaults to `us-east-1`)
+
+Preview Terraform state is isolated per PR:
+
+```bash
+iac-builder/previews/pr-<number>/<region>/terraform.tfstate
+```
+
+Each preview also creates a GitHub Deployment environment named `preview-pr-<number>`. When the preview is live, the deployment status is marked `success` with the preview URL. On PR close, the workflow runs `terraform destroy`, removes the preview state object, marks matching GitHub deployments `inactive`, and then attempts to delete the dynamic GitHub environment. Environment deletion uses `GITHUB_TOKEN` first; if GitHub rejects that cleanup due to permissions, teardown still succeeds after logging a warning.
+
+If your AWS OIDC trust currently only allows `repo:MichaelJ43/iac-builder:ref:refs/heads/main`, expand it before enabling previews. The preview deploy job uses dynamic GitHub environments, so the OIDC subject is expected to match `repo:MichaelJ43/iac-builder:environment:preview-pr-*`; keep the condition scoped to this repository.
+
 ## Undeploy
 
 Run the **Destroy AWS** workflow (manual). Type `DELETE` in the `confirm` input. It runs `terraform destroy` for the same state key as deploy.
