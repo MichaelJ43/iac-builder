@@ -450,7 +450,11 @@ export function App() {
       <main className="main m43-main">
         <header className="m43-site-header">
           <h1>iac-builder</h1>
-          <p className="m43-intro">Guided IaC for AWS EC2 (MVP). Pick a framework first.</p>
+          <p className="m43-intro">
+            Guided IaC for AWS EC2 (MVP). Use the form top-to-bottom: <strong>framework</strong> and{" "}
+            <strong>region</strong>, then an optional <strong>AWS profile</strong> for discovery, then network and
+            compute. <strong>Starter</strong> templates and <strong>server presets</strong> are shortcuts — optional.
+          </p>
         </header>
         <div className="wizard-toolbar">
           <button type="button" className={toolbarButtonClass} onClick={undo} disabled={!canUndo}>
@@ -514,148 +518,58 @@ export function App() {
           {selectedStarter && <p className="help">{selectedStarter.description}</p>}
         </div>
 
-        <div className={`${fieldClass} preset-compare`}>
-          <label>Saved API presets</label>
-          <p className="help">
-            Presets are stored on the server. <strong>Load into wizard</strong> replaces your answers (Undo
-            reverts). <strong>Set baseline</strong> diffs without changing the form.             <strong>Download as JSON</strong> uses the same file shape as <strong>Export configuration</strong> for
-            sharing. <strong>Create from JSON file</strong> uploads a v1 file to the API. <strong>Delete</strong>{" "}
-            removes a preset from the API.
-          </p>
-          {presetListErr && <p className="preset-compare__err m43-message--error">{presetListErr}</p>}
-          {presetActionErr && <p className="preset-compare__err m43-message--error">{presetActionErr}</p>}
-          <div className="preset-compare__row">
+
+
+        <p className="help">
+          This flow targets a single <code>aws_instance</code> (or equivalent) in one region.{" "}
+          <strong>Subnet</strong> is required so the instance has a network placement.{" "}
+          <strong>VPC</strong> is optional in generated Terraform; choosing one unlocks better subnet and security
+          group suggestions.
+        </p>
+        {err && <p className={errorClass}>{err}</p>}
+
+        <div className={fieldClass}>
+          <label>IaC framework</label>
+          <select
+            className={inputClass}
+            aria-label="IaC framework"
+            value={state.framework}
+            onChange={(e) => setState((s) => ({ ...s, framework: e.target.value as Framework }))}
+          >
+            <option value="">Select…</option>
+            {frameworks.map((f) => (
+              <option key={f.id} value={f.id}>
+                {f.label}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {canShowCloud && (
+          <div className={fieldClass}>
+            <label>Cloud</label>
             <select
               className={inputClass}
-              value={selectedPresetId}
-              onChange={(e) => {
-                setSelectedPresetId(e.target.value);
-                setPresetActionErr(null);
-              }}
-              disabled={presets.length === 0}
-              aria-label="Saved preset for comparison"
+              value={state.cloud}
+              onChange={(e) => setState((s) => ({ ...s, cloud: e.target.value }))}
             >
-              <option value="">
-                {presetListErr
-                  ? "Could not load presets"
-                  : presets.length === 0
-                    ? "No presets in API"
-                    : "Select a preset…"}
-              </option>
-              {presets.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name}
-                </option>
-              ))}
+              <option value="aws">AWS</option>
             </select>
-            <button
-              type="button"
-              className={toolbarButtonClass}
-              disabled={!selectedPresetId || compareLoading}
-              onClick={() => {
-                void (async () => {
-                  setPresetCompareErr(null);
-                  setCompareLoading(true);
-                  try {
-                    const w = await getPresetWizard(selectedPresetId);
-                    const meta = presets.find((p) => p.id === selectedPresetId);
-                    setDiffBaseline(w);
-                    setDiffBaselineName(meta?.name ?? selectedPresetId);
-                    setDiffBaselinePresetId(selectedPresetId);
-                  } catch (e) {
-                    setPresetCompareErr(errorMessageFromUnknown(e));
-                  } finally {
-                    setCompareLoading(false);
-                  }
-                })();
-              }}
-            >
-              {compareLoading ? "Loading…" : "Set baseline"}
-            </button>
-            <button
-              type="button"
-              className={toolbarButtonClass}
-              disabled={!selectedPresetId || presetApplyBusy}
-              onClick={loadSelectedPresetIntoWizard}
-            >
-              {presetApplyBusy ? "Loading…" : "Load into wizard"}
-            </button>
-            <button
-              type="button"
-              className={toolbarButtonClass}
-              disabled={!selectedPresetId || presetDownloadBusy}
-              onClick={downloadSelectedPresetAsJson}
-            >
-              {presetDownloadBusy ? "Preparing…" : "Download as JSON"}
-            </button>
-            <button
-              type="button"
-              className="toolbar-btn m43-button toolbar-btn--danger"
-              disabled={!selectedPresetId || presetDeleteBusy}
-              onClick={deleteSelectedPreset}
-            >
-              {presetDeleteBusy ? "Deleting…" : "Delete preset"}
-            </button>
           </div>
-          <p className="help">
-            Create a new preset from the <strong>current wizard</strong> or a <strong>v1 JSON file</strong> (export /
-            download format). The name field is optional for file import: if empty, the file’s basename (without{" "}
-            <code>.json</code>) is used.
-          </p>
-          <div className="preset-compare__row">
-            <input
-              className={inputClass}
-              value={newPresetName}
-              onChange={(e) => {
-                setNewPresetName(e.target.value);
-                setPresetActionErr(null);
-              }}
-              placeholder="Name for this preset"
-              autoComplete="off"
-              aria-label="Name for new server preset"
-              disabled={presetSaveBusy}
-            />
-            <input
-              id="preset-import-json"
-              ref={presetImportFileRef}
-              type="file"
-              accept="application/json,.json"
-              className="visually-hidden"
-              tabIndex={-1}
-              onChange={onPresetImportFileChange}
-            />
-            <button
-              type="button"
-              className={toolbarButtonClass}
-              disabled={presetSaveBusy}
-              onClick={saveCurrentAsPreset}
-            >
-              {presetSaveBusy ? "Saving…" : "Save to API as preset"}
-            </button>
-            <button
-              type="button"
-              className={toolbarButtonClass}
-              disabled={presetSaveBusy}
-              onClick={() => presetImportFileRef.current?.click()}
-              aria-label="Create API preset from a v1 JSON file on your device"
-            >
-              {presetSaveBusy ? "Saving…" : "Create from JSON file"}
-            </button>
-          </div>
-          {presetCompareErr && <p className="preset-compare__err m43-message--error">{presetCompareErr}</p>}
-          {diffBaseline && diffBaselineName && (
-            <PresetDiffTable
-              name={diffBaselineName}
-              baseline={diffBaseline}
-              current={state}
-              onClear={() => {
-                setDiffBaseline(null);
-                setDiffBaselineName(null);
-                setDiffBaselinePresetId(null);
-              }}
-            />
-          )}
-        </div>
+        )}
+
+        {canShowRegion && (
+          <ComboboxField
+            label="Region"
+            value={state.region}
+            onChange={(v) => setState((s) => ({ ...s, region: v }))}
+            suggestions={regionOpts}
+            placeholder="us-east-1"
+            help={<>Type any region; the list is a shortcut for common values.</>}
+            aria-label="AWS region"
+          />
+        )}
+
 
         {authStatus?.kind === "signedOut" && (
           <p className="help">
@@ -712,57 +626,6 @@ export function App() {
             />
           </div>
         )}
-
-        <p className="help">
-          This flow targets a single <code>aws_instance</code> (or equivalent) in one region.{" "}
-          <strong>Subnet</strong> is required so the instance has a network placement.{" "}
-          <strong>VPC</strong> is optional in generated Terraform; choosing one unlocks better subnet and security
-          group suggestions.
-        </p>
-        {err && <p className={errorClass}>{err}</p>}
-
-        <div className={fieldClass}>
-          <label>IaC framework</label>
-          <select
-            className={inputClass}
-            aria-label="IaC framework"
-            value={state.framework}
-            onChange={(e) => setState((s) => ({ ...s, framework: e.target.value as Framework }))}
-          >
-            <option value="">Select…</option>
-            {frameworks.map((f) => (
-              <option key={f.id} value={f.id}>
-                {f.label}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {canShowCloud && (
-          <div className={fieldClass}>
-            <label>Cloud</label>
-            <select
-              className={inputClass}
-              value={state.cloud}
-              onChange={(e) => setState((s) => ({ ...s, cloud: e.target.value }))}
-            >
-              <option value="aws">AWS</option>
-            </select>
-          </div>
-        )}
-
-        {canShowRegion && (
-          <ComboboxField
-            label="Region"
-            value={state.region}
-            onChange={(v) => setState((s) => ({ ...s, region: v }))}
-            suggestions={regionOpts}
-            placeholder="us-east-1"
-            help={<>Type any region; the list is a shortcut for common values.</>}
-            aria-label="AWS region"
-          />
-        )}
-
         {canShowNetwork && (
           <>
             <ComboboxField
@@ -899,6 +762,150 @@ export function App() {
           </>
         )}
 
+
+        <div className={`${fieldClass} preset-compare`}>
+          <label>Saved API presets</label>
+          <p className="help">
+            Presets are stored on the server. <strong>Load into wizard</strong> replaces your answers (Undo
+            reverts). <strong>Set baseline</strong> diffs without changing the form. <strong>Download as JSON</strong>{" "}
+            uses the same file shape as <strong>Export configuration</strong> for sharing.{" "}
+            <strong>Create from JSON file</strong> uploads a v1 file to the API. <strong>Delete</strong> removes a
+            preset from the API.
+          </p>
+          {presetListErr && <p className="preset-compare__err m43-message--error">{presetListErr}</p>}
+          {presetActionErr && <p className="preset-compare__err m43-message--error">{presetActionErr}</p>}
+          <div className="preset-compare__row">
+            <select
+              className={inputClass}
+              value={selectedPresetId}
+              onChange={(e) => {
+                setSelectedPresetId(e.target.value);
+                setPresetActionErr(null);
+              }}
+              disabled={presets.length === 0}
+              aria-label="Saved preset for comparison"
+            >
+              <option value="">
+                {presetListErr
+                  ? "Could not load presets"
+                  : presets.length === 0
+                    ? "No presets in API"
+                    : "Select a preset…"}
+              </option>
+              {presets.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
+              ))}
+            </select>
+            <button
+              type="button"
+              className={toolbarButtonClass}
+              disabled={!selectedPresetId || compareLoading}
+              onClick={() => {
+                void (async () => {
+                  setPresetCompareErr(null);
+                  setCompareLoading(true);
+                  try {
+                    const w = await getPresetWizard(selectedPresetId);
+                    const meta = presets.find((p) => p.id === selectedPresetId);
+                    setDiffBaseline(w);
+                    setDiffBaselineName(meta?.name ?? selectedPresetId);
+                    setDiffBaselinePresetId(selectedPresetId);
+                  } catch (e) {
+                    setPresetCompareErr(errorMessageFromUnknown(e));
+                  } finally {
+                    setCompareLoading(false);
+                  }
+                })();
+              }}
+            >
+              {compareLoading ? "Loading…" : "Set baseline"}
+            </button>
+            <button
+              type="button"
+              className={toolbarButtonClass}
+              disabled={!selectedPresetId || presetApplyBusy}
+              onClick={loadSelectedPresetIntoWizard}
+            >
+              {presetApplyBusy ? "Loading…" : "Load into wizard"}
+            </button>
+            <button
+              type="button"
+              className={toolbarButtonClass}
+              disabled={!selectedPresetId || presetDownloadBusy}
+              onClick={downloadSelectedPresetAsJson}
+            >
+              {presetDownloadBusy ? "Preparing…" : "Download as JSON"}
+            </button>
+            <button
+              type="button"
+              className="toolbar-btn m43-button toolbar-btn--danger"
+              disabled={!selectedPresetId || presetDeleteBusy}
+              onClick={deleteSelectedPreset}
+            >
+              {presetDeleteBusy ? "Deleting…" : "Delete preset"}
+            </button>
+          </div>
+          <p className="help">
+            Create a new preset from the <strong>current wizard</strong> or a <strong>v1 JSON file</strong> (export /
+            download format). The name field is optional for file import: if empty, the file’s basename (without{" "}
+            <code>.json</code>) is used.
+          </p>
+          <div className="preset-compare__row">
+            <input
+              className={inputClass}
+              value={newPresetName}
+              onChange={(e) => {
+                setNewPresetName(e.target.value);
+                setPresetActionErr(null);
+              }}
+              placeholder="Name for this preset"
+              autoComplete="off"
+              aria-label="Name for new server preset"
+              disabled={presetSaveBusy}
+            />
+            <input
+              id="preset-import-json"
+              ref={presetImportFileRef}
+              type="file"
+              accept="application/json,.json"
+              className="visually-hidden"
+              tabIndex={-1}
+              onChange={onPresetImportFileChange}
+            />
+            <button
+              type="button"
+              className={toolbarButtonClass}
+              disabled={presetSaveBusy}
+              onClick={saveCurrentAsPreset}
+            >
+              {presetSaveBusy ? "Saving…" : "Save to API as preset"}
+            </button>
+            <button
+              type="button"
+              className={toolbarButtonClass}
+              disabled={presetSaveBusy}
+              onClick={() => presetImportFileRef.current?.click()}
+              aria-label="Create API preset from a v1 JSON file on your device"
+            >
+              {presetSaveBusy ? "Saving…" : "Create from JSON file"}
+            </button>
+          </div>
+          {presetCompareErr && <p className="preset-compare__err m43-message--error">{presetCompareErr}</p>}
+          {diffBaseline && diffBaselineName && (
+            <PresetDiffTable
+              name={diffBaselineName}
+              baseline={diffBaseline}
+              current={state}
+              onClear={() => {
+                setDiffBaseline(null);
+                setDiffBaselineName(null);
+                setDiffBaselinePresetId(null);
+              }}
+            />
+          )}
+        </div>
         {hints.length > 0 && (
           <div className="hints">
             <strong>Security hints</strong>
