@@ -4,16 +4,28 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { App } from "@ui/App";
 import { STARTER_TEMPLATES } from "@ui/starterCatalog";
+import { createAppFetchMock, urlString } from "./testFetchMock";
 
 describe("App starter template", () => {
   beforeEach(() => {
+    const base = createAppFetchMock();
     vi.stubGlobal(
       "fetch",
-      vi.fn(async () => ({
-        ok: true,
-        json: async () => ({ files: { "main.tf": "resource" }, recommendations: [] }),
-        text: async () => "",
-      }))
+      vi.fn(async (input: RequestInfo | URL) => {
+        const u = urlString(input);
+        if (u.includes("/preview")) {
+          return {
+            ok: true,
+            status: 200,
+            json: async () => ({
+              files: { "main.tf": "resource" },
+              recommendations: [],
+            }),
+            text: async () => "",
+          };
+        }
+        return base(input);
+      })
     );
   });
   afterEach(() => {

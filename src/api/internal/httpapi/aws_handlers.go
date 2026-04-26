@@ -17,9 +17,8 @@ func (s *Server) handleValidateProfile(w http.ResponseWriter, r *http.Request) {
 	if r.Body != nil {
 		_ = json.NewDecoder(r.Body).Decode(&body)
 	}
-	creds, defReg, err := s.Store.GetAWSCreds(r.Context(), id)
-	if err != nil {
-		writeJSON(w, http.StatusNotFound, map[string]string{"error": "profile not found"})
+	creds, defReg, ok := s.getProfileCreds(w, r, id)
+	if !ok {
 		return
 	}
 	region := strings.TrimSpace(body.Region)
@@ -37,9 +36,8 @@ func (s *Server) handleValidateProfile(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleListVPCs(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 	region := r.URL.Query().Get("region")
-	creds, defReg, err := s.Store.GetAWSCreds(r.Context(), id)
-	if err != nil {
-		writeJSON(w, http.StatusNotFound, map[string]string{"error": "profile not found"})
+	creds, defReg, ok := s.getProfileCreds(w, r, id)
+	if !ok {
 		return
 	}
 	if region == "" {
@@ -57,9 +55,8 @@ func (s *Server) handleListSubnets(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 	region := r.URL.Query().Get("region")
 	vpcID := r.URL.Query().Get("vpc_id")
-	creds, defReg, err := s.Store.GetAWSCreds(r.Context(), id)
-	if err != nil {
-		writeJSON(w, http.StatusNotFound, map[string]string{"error": "profile not found"})
+	creds, defReg, ok := s.getProfileCreds(w, r, id)
+	if !ok {
 		return
 	}
 	if region == "" {
@@ -75,6 +72,65 @@ func (s *Server) handleListSubnets(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"subnets": subs})
+}
+
+func (s *Server) handleListSecurityGroups(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	region := r.URL.Query().Get("region")
+	vpcID := r.URL.Query().Get("vpc_id")
+	creds, defReg, ok := s.getProfileCreds(w, r, id)
+	if !ok {
+		return
+	}
+	if region == "" {
+		region = defReg
+	}
+	if vpcID == "" {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "vpc_id query required"})
+		return
+	}
+	sgs, err := awsx.ListSecurityGroups(r.Context(), region, creds.AccessKeyID, creds.SecretAccessKey, vpcID)
+	if err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"security_groups": sgs})
+}
+
+func (s *Server) handleListKeyPairs(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	region := r.URL.Query().Get("region")
+	creds, defReg, ok := s.getProfileCreds(w, r, id)
+	if !ok {
+		return
+	}
+	if region == "" {
+		region = defReg
+	}
+	keys, err := awsx.ListKeyPairs(r.Context(), region, creds.AccessKeyID, creds.SecretAccessKey)
+	if err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"key_pairs": keys})
+}
+
+func (s *Server) handleListAMISuggestions(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	region := r.URL.Query().Get("region")
+	creds, defReg, ok := s.getProfileCreds(w, r, id)
+	if !ok {
+		return
+	}
+	if region == "" {
+		region = defReg
+	}
+	amis, err := awsx.DefaultAMIInfo(r.Context(), region, creds.AccessKeyID, creds.SecretAccessKey)
+	if err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"amis": amis})
 }
 
 func (s *Server) handleCreatePreset(w http.ResponseWriter, r *http.Request) {

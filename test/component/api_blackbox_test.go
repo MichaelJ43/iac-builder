@@ -14,6 +14,33 @@ import (
 
 const testMasterKeyHex = "0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20"
 
+func TestAuthStatus(t *testing.T) {
+	h, cleanup, err := export.NewTestHandler("file::memory:?cache=shared", mustDecodeHex(testMasterKeyHex))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer cleanup()
+	s := httptest.NewServer(h)
+	defer s.Close()
+	res, err := http.Get(s.URL + "/api/v1/auth/status")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer res.Body.Close()
+	if res.StatusCode != http.StatusOK {
+		t.Fatalf("status %d", res.StatusCode)
+	}
+	var out struct {
+		Auth string `json:"auth"`
+	}
+	if err := json.NewDecoder(res.Body).Decode(&out); err != nil {
+		t.Fatal(err)
+	}
+	if out.Auth != "disabled" {
+		t.Fatalf("auth %q", out.Auth)
+	}
+}
+
 func TestHealthz(t *testing.T) {
 	h, cleanup, err := export.NewTestHandler("file::memory:?cache=shared", mustDecodeHex(testMasterKeyHex))
 	if err != nil {

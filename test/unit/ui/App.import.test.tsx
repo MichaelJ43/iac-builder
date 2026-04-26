@@ -5,17 +5,11 @@ import userEvent from "@testing-library/user-event";
 import { App } from "@ui/App";
 import { buildWizardExport, stringifyExport } from "@ui/wizardExportImport";
 import { emptyWizardState } from "@ui/api";
+import { createAppFetchMock } from "./testFetchMock";
 
 describe("App import configuration", () => {
   beforeEach(() => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async () => ({
-        ok: true,
-        json: async () => ({ files: {}, recommendations: [] }),
-        text: async () => "",
-      }))
-    );
+    vi.stubGlobal("fetch", createAppFetchMock());
   });
   afterEach(() => {
     vi.unstubAllGlobals();

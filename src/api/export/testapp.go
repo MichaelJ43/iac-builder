@@ -25,6 +25,6 @@ func NewTestHandler(sqliteDSN string, masterKey []byte) (http.Handler, func(), e
 		gen.NewCDKStub(),
 	)
 	_ = os.Setenv("CORS_ORIGIN", "*")
-	s := &httpapi.Server{Reg: reg, Store: st, Version: "test"}
+	s := &httpapi.Server{Reg: reg, Store: st, Version: "test", Auth: nil}
 	return s.Handler(), cleanup, nil
 }
