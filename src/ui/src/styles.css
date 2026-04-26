@@ -47,6 +47,7 @@
 
   --ib-z-slider: 20;
   --ib-z-slider-tab: 21;
+  --ib-z-modal: 50;
   --ib-slider-width: 380px;
 }
 
@@ -406,6 +407,125 @@ button.primary:not(.m43-button) {
   .slider {
     transition: none;
   }
+}
+
+.profile-inline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 0.25rem;
+}
+.profile-inline__summary {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.4;
+  flex: 1 1 12rem;
+}
+.profile-inline__region {
+  font-weight: 500;
+  color: var(--ib-fg-muted);
+}
+.profile-inline__none {
+  color: var(--ib-fg-muted);
+}
+.profile-inline .toolbar-btn {
+  width: auto;
+  margin-bottom: 0;
+  flex: 0 0 auto;
+}
+
+.profile-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: var(--ib-z-modal);
+  background: rgba(15, 23, 42, 0.45);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 1.5rem 1rem;
+  padding-top: max(1.5rem, env(safe-area-inset-top));
+  overflow: auto;
+}
+.profile-modal {
+  width: 100%;
+  max-width: 31rem;
+  margin: 2rem auto;
+  background: var(--ib-bg-elevated);
+  color: var(--ib-fg);
+  border: 1px solid var(--ib-border-input);
+  border-radius: var(--ib-radius-lg);
+  box-shadow: 0 18px 48px rgba(15, 23, 42, 0.18);
+  padding: 1rem 1.1rem 1.1rem;
+}
+.profile-modal__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+.profile-modal__title {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+.profile-modal__icon-btn {
+  flex: 0 0 auto;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  margin: 0;
+  line-height: 1;
+  font-size: 1.35rem;
+  border-radius: var(--ib-radius-sm);
+}
+.profile-modal__intro {
+  margin-top: 0.5rem;
+}
+.profile-modal__section {
+  margin-top: 1rem;
+}
+.profile-modal__label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 0.35rem;
+  font-size: 0.9rem;
+}
+.profile-modal__h3 {
+  margin: 0 0 0.25rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+.profile-modal__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+.profile-modal__row .m43-input,
+.profile-modal__row select.m43-input {
+  flex: 1 1 10rem;
+  min-width: 0;
+  width: auto;
+  max-width: 100%;
+  margin-bottom: 0;
+}
+.profile-modal__row--wrap .m43-input {
+  min-width: 8rem;
+}
+.profile-modal__row .toolbar-btn {
+  width: auto;
+  margin-bottom: 0;
+  flex: 0 0 auto;
+}
+.profile-modal__footer {
+  margin-top: 1.1rem;
+  display: flex;
+  justify-content: flex-end;
+}
+.profile-modal__footer .toolbar-btn {
+  width: auto;
+  margin-bottom: 0;
 }
 
 /* Screen-reader-only; pair with a visible control (e.g. file input + "Import" button) */

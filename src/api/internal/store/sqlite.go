@@ -221,6 +221,21 @@ func (s *Store) GetAWSCreds(ctx context.Context, id, userID string, enforceUser 
 	return c, region, nil
 }
 
+// DeleteProfile removes a row by id. When enforceUser is true, the row must belong to userID.
+func (s *Store) DeleteProfile(ctx context.Context, id, userID string, enforceUser bool) (int64, error) {
+	var res sql.Result
+	var err error
+	if enforceUser {
+		res, err = s.db.ExecContext(ctx, `DELETE FROM credential_profiles WHERE id=? AND user_id=?`, id, userID)
+	} else {
+		res, err = s.db.ExecContext(ctx, `DELETE FROM credential_profiles WHERE id=?`, id)
+	}
+	if err != nil {
+		return 0, err
+	}
+	return res.RowsAffected()
+}
+
 func (s *Store) CreatePreset(ctx context.Context, name string, data json.RawMessage) (string, error) {
 	id := uuid.New().String()
 	_, err := s.db.ExecContext(ctx, `INSERT INTO wizard_presets(id,name,json_data,created_at) VALUES(?,?,?,?)`,
