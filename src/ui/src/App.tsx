@@ -6,7 +6,13 @@ import { ComboboxField } from "./ComboboxField";
 import { fetchAuthStatus, listCredentialProfiles, type AuthStatus, type ProfileSummary } from "./credentialApi";
 import { errorMessageFromUnknown } from "./fetchUtils";
 import { PresetDiffTable } from "./PresetDiffTable";
-import { getPresetWizard, listPresets, type PresetSummary } from "./presetApi";
+import {
+  createWizardPreset,
+  deletePreset,
+  getPresetWizard,
+  listPresets,
+  type PresetSummary,
+} from "./presetApi";
 import { useAwsDiscovery } from "./useAwsDiscovery";
 import { useWizardUndoState } from "./useWizardUndoState";
 import {
@@ -45,6 +51,12 @@ export function App() {
   const [presetCompareErr, setPresetCompareErr] = useState<string | null>(null);
   const [diffBaseline, setDiffBaseline] = useState<WizardState | null>(null);
   const [diffBaselineName, setDiffBaselineName] = useState<string | null>(null);
+  /** When the diff baseline was loaded from a stored preset, its id (used to clear diff if preset is deleted). */
+  const [diffBaselinePresetId, setDiffBaselinePresetId] = useState<string | null>(null);
+  const [newPresetName, setNewPresetName] = useState("");
+  const [presetSaveBusy, setPresetSaveBusy] = useState(false);
+  const [presetDeleteBusy, setPresetDeleteBusy] = useState(false);
+  const [presetActionErr, setPresetActionErr] = useState<string | null>(null);
   const [selectedStarterId, setSelectedStarterId] = useState("");
   const selectedStarter = useMemo(
     () => (selectedStarterId ? getStarterTemplate(selectedStarterId) : undefined),
@@ -271,6 +283,66 @@ export function App() {
     replaceWithState(structuredClone(t.state));
   }, [selectedStarterId, replaceWithState]);
 
+  const refreshPresets = useCallback(async () => {
+    try {
+      const list = await listPresets();
+      setPresets(list);
+      setPresetListErr(null);
+    } catch (e) {
+      setPresetListErr(errorMessageFromUnknown(e));
+    }
+  }, []);
+
+  const saveCurrentAsPreset = useCallback(() => {
+    setPresetActionErr(null);
+    const name = newPresetName.trim();
+    if (!name) {
+      setPresetActionErr("Enter a name for the preset.");
+      return;
+    }
+    setPresetSaveBusy(true);
+    void (async () => {
+      try {
+        const id = await createWizardPreset(name, state);
+        setNewPresetName("");
+        await refreshPresets();
+        setSelectedPresetId(id);
+      } catch (e) {
+        setPresetActionErr(errorMessageFromUnknown(e));
+      } finally {
+        setPresetSaveBusy(false);
+      }
+    })();
+  }, [newPresetName, state, refreshPresets]);
+
+  const deleteSelectedPreset = useCallback(() => {
+    if (!selectedPresetId) {
+      return;
+    }
+    if (!window.confirm("Delete this preset from the server? This cannot be undone.")) {
+      return;
+    }
+    setPresetActionErr(null);
+    setPresetDeleteBusy(true);
+    void (async () => {
+      const id = selectedPresetId;
+      try {
+        await deletePreset(id);
+        if (diffBaselinePresetId === id) {
+          setDiffBaseline(null);
+          setDiffBaselineName(null);
+          setDiffBaselinePresetId(null);
+        }
+        setSelectedPresetId("");
+        await refreshPresets();
+      } catch (e) {
+        setPresetActionErr(errorMessageFromUnknown(e));
+      } finally {
+        setPresetDeleteBusy(false);
+      }
+    })();
+  }, [selectedPresetId, diffBaselinePresetId, refreshPresets]);
+
   const toolbarButtonClass = "toolbar-btn m43-button";
   const fieldClass = "step m43-field";
   const inputClass = "m43-input";
@@ -346,17 +418,22 @@ export function App() {
         </div>
 
         <div className={`${fieldClass} preset-compare`}>
-          <label>Compare wizard to saved preset</label>
+          <label>Saved API presets</label>
           <p className="help">
-            Pick a preset stored by the API, then <strong>Set baseline</strong>. The table updates as you edit the
-            form; it does not change your answers.
+            Presets are stored on the server. <strong>Save</strong> the current wizard as a new preset,{" "}
+            <strong>Set baseline</strong> to diff your edits without changing the form, or <strong>Delete</strong> a
+            preset you no longer need.
           </p>
           {presetListErr && <p className="preset-compare__err m43-message--error">{presetListErr}</p>}
+          {presetActionErr && <p className="preset-compare__err m43-message--error">{presetActionErr}</p>}
           <div className="preset-compare__row">
             <select
               className={inputClass}
               value={selectedPresetId}
-              onChange={(e) => setSelectedPresetId(e.target.value)}
+              onChange={(e) => {
+                setSelectedPresetId(e.target.value);
+                setPresetActionErr(null);
+              }}
               disabled={presets.length === 0}
               aria-label="Saved preset for comparison"
             >
@@ -386,6 +463,7 @@ export function App() {
                     const meta = presets.find((p) => p.id === selectedPresetId);
                     setDiffBaseline(w);
                     setDiffBaselineName(meta?.name ?? selectedPresetId);
+                    setDiffBaselinePresetId(selectedPresetId);
                   } catch (e) {
                     setPresetCompareErr(errorMessageFromUnknown(e));
                   } finally {
@@ -395,6 +473,37 @@ export function App() {
               }}
             >
               {compareLoading ? "Loading…" : "Set baseline"}
+            </button>
+            <button
+              type="button"
+              className="toolbar-btn m43-button toolbar-btn--danger"
+              disabled={!selectedPresetId || presetDeleteBusy}
+              onClick={deleteSelectedPreset}
+            >
+              {presetDeleteBusy ? "Deleting…" : "Delete preset"}
+            </button>
+          </div>
+          <p className="help">Create a new preset from the current wizard (same fields the API stores for diffs):</p>
+          <div className="preset-compare__row">
+            <input
+              className={inputClass}
+              value={newPresetName}
+              onChange={(e) => {
+                setNewPresetName(e.target.value);
+                setPresetActionErr(null);
+              }}
+              placeholder="Name for this preset"
+              autoComplete="off"
+              aria-label="Name for new server preset"
+              disabled={presetSaveBusy}
+            />
+            <button
+              type="button"
+              className={toolbarButtonClass}
+              disabled={presetSaveBusy}
+              onClick={saveCurrentAsPreset}
+            >
+              {presetSaveBusy ? "Saving…" : "Save to API as preset"}
             </button>
           </div>
           {presetCompareErr && <p className="preset-compare__err m43-message--error">{presetCompareErr}</p>}
@@ -406,6 +515,7 @@ export function App() {
               onClear={() => {
                 setDiffBaseline(null);
                 setDiffBaselineName(null);
+                setDiffBaselinePresetId(null);
               }}
             />
           )}
