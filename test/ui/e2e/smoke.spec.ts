@@ -30,7 +30,7 @@ test("import configuration from JSON fills the wizard", async ({ page }) => {
   await page.goto("/");
   await page.locator("#wizard-import-file").setInputFiles(minimalWizard);
   await expect(page.getByRole("combobox", { name: "IaC framework" })).toHaveValue("terraform");
-  await expect(page.getByRole("combobox", { name: "Cloud region" })).toHaveValue("us-east-1");
+  await expect(page.getByRole("combobox", { name: "Primary AWS region" })).toHaveValue("us-east-1");
   await expect(page.getByRole("combobox", { name: "Subnet ID" })).toHaveValue("subnet-test123");
 });
 
@@ -39,7 +39,7 @@ test("bundled starter template loads into the form", async ({ page }) => {
   await page.getByLabel("Bundled starter template").selectOption("terraform-us-east-1-skeleton");
   await page.getByRole("button", { name: "Load starter" }).click();
   await expect(page.getByRole("combobox", { name: "IaC framework" })).toHaveValue("terraform");
-  await expect(page.getByRole("combobox", { name: "Cloud region" })).toHaveValue("us-east-1");
+  await expect(page.getByRole("combobox", { name: "Primary AWS region" })).toHaveValue("us-east-1");
   await expect(page.getByRole("combobox", { name: "Subnet ID" })).toHaveValue("subnet-0replace00000000");
 });
 

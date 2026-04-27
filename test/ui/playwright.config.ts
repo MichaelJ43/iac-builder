@@ -13,20 +13,21 @@ export default defineConfig({
   },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
 
-  // With CI=true, `make test` runs Playwright and must always spawn servers (reuseExistingServer: false).
-  // On a developer machine, allow reusing *this* e2e server (viteURL) if already up — still distinct from 5173.
+  // Always start dedicated e2e processes (Vite 33331 + API 8080). Reusing a random dev
+  // server on the same port produced flaky local failures; opt in with PW_REUSE_E2E_SERVERS=1
+  // if you intentionally want to share already-running instances.
   webServer: [
     {
       command: `cd ../../src/ui && VITE_IAC_AI_ASSIST=true npm run dev -- --host 127.0.0.1 --port ${vitePort}`,
       url: viteURL,
-      reuseExistingServer: !process.env.CI,
+      reuseExistingServer: process.env.PW_REUSE_E2E_SERVERS === "1",
       timeout: 120_000,
     },
     {
       command:
         "cd ../../src/api && IAC_MASTER_KEY=0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20 LISTEN_ADDR=127.0.0.1:8080 SQLITE_DSN=file::memory:?cache=shared APP_VERSION=0.1.0 go run ./cmd/iac-builder-api",
       url: "http://127.0.0.1:8080/healthz",
-      reuseExistingServer: !process.env.CI,
+      reuseExistingServer: process.env.PW_REUSE_E2E_SERVERS === "1",
       timeout: 120_000,
     },
   ],
