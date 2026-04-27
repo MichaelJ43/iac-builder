@@ -94,10 +94,15 @@ resource "aws_lambda_function" "api" {
 
   environment {
     variables = {
-      IAC_MASTER_KEY = random_id.iac_master.hex
-      SQLITE_DSN     = "file:/tmp/iac-builder.sqlite?_pragma=busy_timeout(5000)&_pragma=foreign_keys(1)"
-      APP_VERSION    = "0.1.0"
-      CORS_ORIGIN    = "*"
+      IAC_MASTER_KEY   = random_id.iac_master.hex
+      SQLITE_DSN       = "file:/tmp/iac-builder.sqlite?_pragma=busy_timeout(5000)&_pragma=foreign_keys(1)"
+      APP_VERSION      = "0.1.0"
+      CORS_ORIGIN      = "*"
+      IAC_API_REGION   = var.aws_region
+      # P9: this deployment’s region only; add another stack in another region to grow the enabled set.
+      IAC_API_ENABLED_REGIONS   = var.aws_region
+      IAC_DATA_RESIDENCY_REGION = var.aws_region
+      IAC_HOSTED_TLS_TERMINATION = local.alb_https_enabled_effective ? "1" : "0"
     }
   }
 }

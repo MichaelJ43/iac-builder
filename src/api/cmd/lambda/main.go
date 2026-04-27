@@ -12,6 +12,7 @@ import (
 	"github.com/MichaelJ43/iac-builder/api/internal/crypto"
 	"github.com/MichaelJ43/iac-builder/api/internal/gen"
 	"github.com/MichaelJ43/iac-builder/api/internal/httpapi"
+	"github.com/MichaelJ43/iac-builder/api/internal/ops"
 	"github.com/MichaelJ43/iac-builder/api/internal/store"
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
@@ -71,7 +72,11 @@ func initHandler() {
 		if ver == "" {
 			ver = "0.0.0-lambda"
 		}
-		srv := &httpapi.Server{Reg: reg, Store: st, Version: ver, Auth: auth.FromEnv()}
+		o, err := ops.NewFromEnv()
+		if err != nil {
+			log.Fatalf("ops: %v", err)
+		}
+		srv := &httpapi.Server{Reg: reg, Store: st, Version: ver, Auth: auth.FromEnv(), Ops: o}
 		handler = &albHandler{h: srv.Handler()}
 	})
 }

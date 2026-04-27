@@ -82,6 +82,34 @@ export async function fetchOperatorGuards(): Promise<OperatorGuardsStatus> {
   return (await res.json()) as OperatorGuardsStatus;
 }
 
+/** P9: deployment region, multi-region catalog, hosted posture, telemetry opt-in (server + client). */
+export type OperationsInfo = {
+  app_version: string;
+  region: {
+    current: string;
+    enabled: string[];
+    catalog: string[];
+    current_in_enabled: boolean;
+  };
+  telemetry: {
+    server_opt_in: boolean;
+    instructions: string;
+  };
+  posture: {
+    data_residency: string;
+    tls_terminated: boolean;
+    hosted_readiness: string;
+  };
+};
+
+export async function fetchOperationsInfo(): Promise<OperationsInfo> {
+  const res = await fetch(`${base}/api/v1/operations`, withCredentials);
+  if (!res.ok) {
+    throw new Error(await normalizeFetchError(res));
+  }
+  return (await res.json()) as OperationsInfo;
+}
+
 export async function preview(state: WizardState): Promise<Record<string, string>> {
   const res = await fetch(`${base}/api/v1/preview`, {
     ...withCredentials,

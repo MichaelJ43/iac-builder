@@ -10,7 +10,9 @@ import {
 import type { CloudId, Framework, SecurityRecommendation, WizardState } from "./api";
 import {
   emptyWizardState,
+  fetchOperationsInfo,
   fetchOperatorGuards,
+  type OperationsInfo,
   type OperatorGuardsStatus,
   preview,
   securityRecommendations,
@@ -82,6 +84,7 @@ export function App() {
   const [hints, setHints] = useState<SecurityRecommendation[]>([]);
   const [err, setErr] = useState<string | null>(null);
   const [operatorGuards, setOperatorGuards] = useState<OperatorGuardsStatus | null>(null);
+  const [operationsInfo, setOperationsInfo] = useState<OperationsInfo | null>(null);
 
   const [presets, setPresets] = useState<PresetSummary[]>([]);
   const [presetListErr, setPresetListErr] = useState<string | null>(null);
@@ -151,6 +154,16 @@ export function App() {
         setOperatorGuards(await fetchOperatorGuards());
       } catch {
         setOperatorGuards(null);
+      }
+    })();
+  }, []);
+
+  useEffect(() => {
+    void (async () => {
+      try {
+        setOperationsInfo(await fetchOperationsInfo());
+      } catch {
+        setOperationsInfo(null);
       }
     })();
   }, []);
@@ -570,6 +583,13 @@ export function App() {
             <strong>region</strong>, then an optional <strong>AWS profile</strong> for discovery, then network and
             compute. <strong>Starter</strong> templates and <strong>server presets</strong> are shortcuts — optional.
           </p>
+          {operationsInfo && (
+            <p className="help" role="status">
+              <strong>API deployment</strong>: this instance is in <code>{operationsInfo.region.current}</code> (active
+              API regions: {operationsInfo.region.enabled.join(", ")}). See <code>GET /api/v1/operations</code> for
+              region catalog and posture.
+            </p>
+          )}
         </header>
         {operatorGuards?.any_enabled && (
           <p className="help m43-operator-guards" role="status">
