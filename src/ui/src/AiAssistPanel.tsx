@@ -1,24 +1,81 @@
-import { useId, useMemo, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useState } from "react";
 import type { WizardState } from "./api";
+import {
+  deleteOpenAIKey,
+  getOpenAIKeyStatus,
+  getPromptDisclosure,
+  postAiAssist,
+  putOpenAIKey,
+  type PromptDisclosure,
+} from "./aiAssistApi";
 import { buildAiContextForAiAssist } from "./aiAssistPolicy";
+import type { AuthStatus } from "./credentialApi";
+import { errorMessageFromUnknown } from "./fetchUtils";
 
 const POLICY_MD =
   "https://github.com/MichaelJ43/iac-builder/blob/main/docs/ai-assist.md";
+const PROMPTS_SOURCE =
+  "https://github.com/MichaelJ43/iac-builder/blob/main/src/api/internal/aiassist/prompts.go";
 
 type Props = {
   state: WizardState;
+  authStatus: AuthStatus | null;
 };
 
 /**
- * P1: policy surface + context preview. No model calls; CTA remains disabled
- * until a provider is integrated with explicit user action.
+ * BYOK OpenAI key (encrypted on server) + user-triggered POST /api/v1/ai/assist.
  */
-export function AiAssistPanel({ state }: Props) {
+export function AiAssistPanel({ state, authStatus }: Props) {
   const [open, setOpen] = useState(false);
   const [ack, setAck] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const [resultMsg, setResultMsg] = useState<string | null>(null);
+  const [suggestions, setSuggestions] = useState<string | null>(null);
+  const [keyInput, setKeyInput] = useState("");
+  const [keyStatus, setKeyStatus] = useState<"unknown" | "no" | "yes">("unknown");
+  const [keyLast4, setKeyLast4] = useState<string | null>(null);
+  const [keyBusy, setKeyBusy] = useState(false);
+  const [disclosure, setDisclosure] = useState<PromptDisclosure | null>(null);
+  const [disclosureErr, setDisclosureErr] = useState<string | null>(null);
+  const [disclosureLoading, setDisclosureLoading] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
   const ctx = useMemo(() => buildAiContextForAiAssist(state), [state]);
   const json = useMemo(() => JSON.stringify(ctx, null, 2), [ctx]);
   const ackId = useId();
+  const canStoreKey =
+    authStatus === null
+      ? false
+      : authStatus.kind === "disabled" || authStatus.kind === "signedIn";
+  const mustSignIn = authStatus !== null && authStatus.kind === "signedOut";
+  const canSend = ack && !busy && !mustSignIn;
+
+  const refreshKey = useCallback(async () => {
+    if (!canStoreKey) {
+      setKeyStatus("no");
+      setKeyLast4(null);
+      return;
+    }
+    try {
+      const s = await getOpenAIKeyStatus();
+      if (s.configured) {
+        setKeyStatus("yes");
+        setKeyLast4(s.key_last4);
+      } else {
+        setKeyStatus("no");
+        setKeyLast4(null);
+      }
+    } catch (e) {
+      setKeyStatus("no");
+      setKeyLast4(null);
+    }
+  }, [canStoreKey]);
+
+  useEffect(() => {
+    if (open && canStoreKey) {
+      void refreshKey();
+    }
+  }, [open, canStoreKey, refreshKey]);
 
   return (
     <div className="ai-assist">
@@ -33,18 +90,161 @@ export function AiAssistPanel({ state }: Props) {
       {open && (
         <div className="ai-assist__panel" role="region" aria-label="AI assist policy and context">
           <p className="help">
-            This area is for a future <strong>opt-in</strong> assistant. Today it only shows a policy link and
-            a preview of the JSON context. Read{" "}
+            Bring your own <strong>OpenAI API key</strong> (BYOK). Keys are <strong>encrypted on the server</strong> with
+            the same app master key as AWS profiles. The <strong>operator does not pay</strong> for model calls—you use
+            your key and billing. Read{" "}
             <a href={POLICY_MD} className="ai-assist__link" rel="noreferrer" target="_blank">
               Optional AI assist — policy
-            </a>{" "}
-            in the repository.
+            </a>
+            .
           </p>
+          {mustSignIn && (
+            <p className="message--error m43-message--error ai-assist__err">
+              Sign in to save an API key and request suggestions on this host.
+            </p>
+          )}
+          {canStoreKey && (
+            <div className="ai-assist__byok m43-field">
+              <label htmlFor="ai-openai-key">OpenAI API key (BYOK)</label>
+              <p className="help">
+                Paste a key from https://platform.openai.com (starts with <code>sk-</code>). It is not shown again after
+                save.
+              </p>
+              {keyStatus === "yes" && keyLast4 && (
+                <p className="help" aria-live="polite">
+                  Key on file: <code>sk-…{keyLast4}</code>
+                </p>
+              )}
+              <div className="ai-assist__key-row">
+                <input
+                  id="ai-openai-key"
+                  className="m43-input"
+                  type="password"
+                  autoComplete="off"
+                  value={keyInput}
+                  onChange={(e) => setKeyInput(e.target.value)}
+                  placeholder="sk-…"
+                  disabled={keyBusy}
+                  aria-label="OpenAI API key"
+                />
+                <button
+                  type="button"
+                  className="toolbar-btn m43-button"
+                  disabled={keyBusy || !keyInput.trim()}
+                  onClick={() => {
+                    setKeyBusy(true);
+                    setErr(null);
+                    void (async () => {
+                      try {
+                        await putOpenAIKey(keyInput.trim());
+                        setKeyInput("");
+                        await refreshKey();
+                      } catch (e) {
+                        setErr(errorMessageFromUnknown(e));
+                      } finally {
+                        setKeyBusy(false);
+                      }
+                    })();
+                  }}
+                >
+                  Save key
+                </button>
+                <button
+                  type="button"
+                  className="toolbar-btn m43-button"
+                  disabled={keyBusy || keyStatus !== "yes"}
+                  onClick={() => {
+                    if (!window.confirm("Remove the saved OpenAI key for this app?")) {
+                      return;
+                    }
+                    setKeyBusy(true);
+                    setErr(null);
+                    void (async () => {
+                      try {
+                        await deleteOpenAIKey();
+                        await refreshKey();
+                      } catch (e) {
+                        setErr(errorMessageFromUnknown(e));
+                      } finally {
+                        setKeyBusy(false);
+                      }
+                    })();
+                  }}
+                >
+                  Remove key
+                </button>
+              </div>
+            </div>
+          )}
           <ul className="ai-assist__list">
-            <li>No call is made to a model from this app build unless a provider is added later with explicit user action.</li>
-            <li>Never paste AWS access keys; the wizard should not store them. Context is only in-browser form fields.</li>
-            <li>Review any future model output the same way you review generated code here.</li>
+            <li>Requests are user-triggered; the server rate-limits and validates the v1 context.</li>
+            <li>Never paste AWS access keys; only wizard fields and your optional OpenAI key (for BYOK) go to the server.</li>
+            <li>Review all model output like any generated code.</li>
           </ul>
+          <div className="ai-assist__notice" role="note">
+            <strong>Model output is unreviewed.</strong> Nothing here is a guarantee of safety or fitness for
+            production. The hosting operator does not vet LLM text. Suggestions can be wrong or outdated—always cross-check
+            with the code preview and security hints.
+          </div>
+          <details
+            className="ai-assist__inspect"
+            onToggle={(e) => {
+              const el = e.currentTarget;
+              if (!el.open || disclosure || disclosureLoading) {
+                return;
+              }
+              setDisclosureLoading(true);
+              setDisclosureErr(null);
+              void (async () => {
+                try {
+                  setDisclosure(await getPromptDisclosure());
+                } catch (err) {
+                  setDisclosureErr(errorMessageFromUnknown(err));
+                } finally {
+                  setDisclosureLoading(false);
+                }
+              })();
+            }}
+          >
+            <summary className="ai-assist__inspect-summary">Inspect prompting (read-only, self-serve)</summary>
+            <p className="help">
+              The public endpoint <code>GET /api/v1/ai/prompt-disclosure</code> returns the same system prompt, prefix,
+              and parameters the API uses for <strong>OpenAI</strong> today. Other providers are not implemented yet; the
+              response includes an empty <code>future_providers</code> list reserved for later backends.
+            </p>
+            {disclosureLoading && <p className="help">Loading…</p>}
+            {disclosureErr && <p className="message--error m43-message--error">{disclosureErr}</p>}
+            {disclosure && (
+              <div className="ai-assist__disclosure">
+                <p className="help">
+                  <strong>Provider (today):</strong> {disclosure.provider}
+                  {disclosure.future_providers.length > 0
+                    ? ` · Future slots: ${disclosure.future_providers.join(", ")}`
+                    : " · No additional providers are wired in this build—only OpenAI Chat Completions."}
+                </p>
+                <p className="help">
+                  <strong>Parameters:</strong> {disclosure.parameters}
+                </p>
+                <p className="help">
+                  {disclosure.user_message_intro} <strong>Prefix:</strong>{" "}
+                  <code className="ai-assist__inline-code">
+                    {JSON.stringify(disclosure.user_message_prefix)}
+                  </code>
+                </p>
+                <p className="ai-assist__dlabel">System message (role=system)</p>
+                <pre className="ai-assist__disclosure-pre" aria-label="System prompt text">
+                  {disclosure.system_prompt}
+                </pre>
+                <p className="help">
+                  Source:{" "}
+                  <a className="ai-assist__link" href={PROMPTS_SOURCE} rel="noreferrer" target="_blank">
+                    aiassist/prompts.go
+                  </a>{" "}
+                  ({disclosure.source_code_path_hint}).
+                </p>
+              </div>
+            )}
+          </details>
           <div className="ai-assist__context">
             <span className="ai-assist__context-label">Context preview (v{ctx.v})</span>
             <pre className="ai-assist__pre">{json}</pre>
@@ -55,22 +255,56 @@ export function AiAssistPanel({ state }: Props) {
                 id={ackId}
                 type="checkbox"
                 checked={ack}
-                onChange={(e) => setAck(e.target.checked)}
+                onChange={(e) => {
+                  setAck(e.target.checked);
+                  setErr(null);
+                  setResultMsg(null);
+                  setSuggestions(null);
+                  setSubmitted(false);
+                }}
               />{" "}
-              I have read the policy and understand a future provider would only receive a context like the preview
-              (no automatic calls today).
+              I have read the policy and understand a suggestion request sends the JSON above to the API, and if I saved
+              a key, my key is used to call OpenAI.
             </label>
           </div>
           <button
             type="button"
             className="primary m43-button m43-button--primary"
-            disabled
-            title="Model provider is not connected in this build. The checkbox and preview ship first."
-            aria-disabled="true"
+            disabled={!canSend}
+            title={!ack ? "Confirm you have read the policy first." : undefined}
+            onClick={() => {
+              setErr(null);
+              setResultMsg(null);
+              setSuggestions(null);
+              setBusy(true);
+              void (async () => {
+                try {
+                  const r = await postAiAssist(ctx);
+                  setResultMsg(r.message);
+                  setSuggestions(r.suggestions && r.suggestions.trim() !== "" ? r.suggestions : null);
+                } catch (e) {
+                  setErr(errorMessageFromUnknown(e));
+                } finally {
+                  setBusy(false);
+                  setSubmitted(true);
+                }
+              })();
+            }}
           >
-            Get AI suggestions
+            {busy ? "Requesting…" : "Get AI suggestions"}
           </button>
-          <p className="help">Provider wiring is planned; undo/redo and your form state are unchanged.</p>
+          {submitted && (
+            <p className="ai-assist__submission-blurb" role="status" aria-live="polite">
+              <strong>Submission note:</strong> A request was sent to this app’s API. If you saved an OpenAI key, the
+              server combined the system prompt and your context (see <strong>Inspect prompting</strong> above) and
+              called the OpenAI API with <em>your</em> key. Re-run <code>GET /api/v1/ai/prompt-disclosure</code> any time
+              to compare with what you expect. Treat all returned text as untrusted.
+            </p>
+          )}
+          {err && <p className="message--error m43-message--error ai-assist__err">{err}</p>}
+          {resultMsg && <p className="ai-assist__result">{resultMsg}</p>}
+          {suggestions && <pre className="ai-assist__suggest">{suggestions}</pre>}
+          <p className="help">Undo/redo and your form state are unchanged.</p>
         </div>
       )}
     </div>

@@ -999,7 +999,7 @@ export function App() {
           </div>
         )}
 
-        {isAiAssistUIEnabled() && <AiAssistPanel state={state} />}
+        {isAiAssistUIEnabled() && <AiAssistPanel state={state} authStatus={authStatus} />}
       </main>
 
       <button

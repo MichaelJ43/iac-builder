@@ -242,3 +242,178 @@ func TestSecurityRecommendations(t *testing.T) {
 		t.Fatal("expected aws_vpc_endpoint in private-egress-endpoints remediation (no public IP in payload)")
 	}
 }
+
+func TestAIAssist_Stub(t *testing.T) {
+	t.Setenv("IAC_AI_ASSIST_RPM", "5")
+	h, cleanup, err := export.NewTestHandler("file::memory:?cache=shared", mustDecodeHex(testMasterKeyHex))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer cleanup()
+	s := httptest.NewServer(h)
+	defer s.Close()
+	body := map[string]any{
+		"context": map[string]any{
+			"v":                 1,
+			"app":               "iac-builder",
+			"stateSummaryLabel": "test",
+			"wizard": map[string]any{
+				"framework": "terraform", "cloud": "aws", "region": "us-east-1",
+			},
+		},
+	}
+	b, _ := json.Marshal(body)
+	res, err := http.Post(s.URL+"/api/v1/ai/assist", "application/json", bytes.NewReader(b))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer res.Body.Close()
+	if res.StatusCode != http.StatusOK {
+		t.Fatalf("status %d", res.StatusCode)
+	}
+	var out struct {
+		OK          bool   `json:"ok"`
+		Mode        string `json:"mode"`
+		Message     string `json:"message"`
+		Suggestions string `json:"suggestions"`
+	}
+	if err := json.NewDecoder(res.Body).Decode(&out); err != nil {
+		t.Fatal(err)
+	}
+	if !out.OK || out.Mode != "stub" {
+		t.Fatalf("response %+v", out)
+	}
+	if out.Message == "" {
+		t.Fatal("expected message")
+	}
+}
+
+func TestAIAssist_BadContext(t *testing.T) {
+	h, cleanup, err := export.NewTestHandler("file::memory:?cache=shared", mustDecodeHex(testMasterKeyHex))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer cleanup()
+	s := httptest.NewServer(h)
+	defer s.Close()
+	b, _ := json.Marshal(map[string]any{
+		"context": map[string]any{"v": 2, "app": "other", "wizard": map[string]any{}},
+	})
+	res, err := http.Post(s.URL+"/api/v1/ai/assist", "application/json", bytes.NewReader(b))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.StatusCode != http.StatusBadRequest {
+		t.Fatalf("status %d", res.StatusCode)
+	}
+}
+
+func TestAIPromptDisclosure(t *testing.T) {
+	h, cleanup, err := export.NewTestHandler("file::memory:?cache=shared", mustDecodeHex(testMasterKeyHex))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer cleanup()
+	s := httptest.NewServer(h)
+	defer s.Close()
+	res, err := http.Get(s.URL + "/api/v1/ai/prompt-disclosure")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer res.Body.Close()
+	if res.StatusCode != http.StatusOK {
+		t.Fatalf("status %d", res.StatusCode)
+	}
+	var out struct {
+		Provider string   `json:"provider"`
+		Future   []string `json:"future_providers"`
+	}
+	if err := json.NewDecoder(res.Body).Decode(&out); err != nil {
+		t.Fatal(err)
+	}
+	if out.Provider != "openai" {
+		t.Fatalf("provider %q", out.Provider)
+	}
+	if out.Future == nil {
+		t.Fatal("expected future_providers array")
+	}
+}
+
+func TestOpenAIKey_PUT_GET_DELETE(t *testing.T) {
+	h, cleanup, err := export.NewTestHandler("file::memory:?cache=shared", mustDecodeHex(testMasterKeyHex))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer cleanup()
+	s := httptest.NewServer(h)
+	defer s.Close()
+	putBody := `{"openai_api_key":"sk-abcdefghijklmnopqrstuv"}`
+	pr, _ := http.NewRequest(http.MethodPut, s.URL+"/api/v1/ai/openai-key", bytes.NewBufferString(putBody))
+	pr.Header.Set("Content-Type", "application/json")
+	res, err := http.DefaultClient.Do(pr)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.StatusCode != http.StatusNoContent {
+		t.Fatalf("put status %d", res.StatusCode)
+	}
+	res, err = http.Get(s.URL + "/api/v1/ai/openai-key")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.StatusCode != http.StatusOK {
+		t.Fatalf("get status %d", res.StatusCode)
+	}
+	var g struct {
+		Configured bool   `json:"configured"`
+		KeyLast4   string `json:"key_last4"`
+	}
+	_ = json.NewDecoder(res.Body).Decode(&g)
+	_ = res.Body.Close()
+	if !g.Configured || g.KeyLast4 != "stuv" {
+		t.Fatalf("get body %+v", g)
+	}
+	del, _ := http.NewRequest(http.MethodDelete, s.URL+"/api/v1/ai/openai-key", nil)
+	res, err = http.DefaultClient.Do(del)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.StatusCode != http.StatusNoContent {
+		t.Fatalf("delete status %d", res.StatusCode)
+	}
+}
+
+func TestAIAssist_RateLimit(t *testing.T) {
+	t.Setenv("IAC_AI_ASSIST_RPM", "2")
+	h, cleanup, err := export.NewTestHandler("file::memory:?cache=shared", mustDecodeHex(testMasterKeyHex))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer cleanup()
+	s := httptest.NewServer(h)
+	defer s.Close()
+	good := map[string]any{
+		"context": map[string]any{
+			"v": 1, "app": "iac-builder", "stateSummaryLabel": "x", "wizard": map[string]any{"framework": "terraform"},
+		},
+	}
+	b, _ := json.Marshal(good)
+	for i := 0; i < 2; i++ {
+		res, err := http.Post(s.URL+"/api/v1/ai/assist", "application/json", bytes.NewReader(b))
+		if err != nil {
+			t.Fatal(err)
+		}
+		res.Body.Close()
+		if res.StatusCode != http.StatusOK {
+			t.Fatalf("i=%d status %d", i, res.StatusCode)
+		}
+	}
+	res, err := http.Post(s.URL+"/api/v1/ai/assist", "application/json", bytes.NewReader(b))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer res.Body.Close()
+	if res.StatusCode != http.StatusTooManyRequests {
+		t.Fatalf("expected 429, got %d", res.StatusCode)
+	}
+}

@@ -50,4 +50,9 @@ test("AI assist policy panel is available when build flag is on", async ({ page 
     page.getByRole("region", { name: "AI assist policy and context" })
   ).toBeVisible();
   await expect(page.getByRole("button", { name: "Get AI suggestions" })).toBeDisabled();
+  await page.getByRole("checkbox", { name: /I have read the policy/i }).check();
+  await page.getByRole("button", { name: "Get AI suggestions" }).click();
+  await expect(
+    page.getByText(/No OpenAI API key saved/i)
+  ).toBeVisible();
 });
