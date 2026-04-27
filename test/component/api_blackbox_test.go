@@ -138,6 +138,50 @@ func TestPreview_Terraform(t *testing.T) {
 	}
 }
 
+func TestPreview_Blocked_SSH_OperatorGuard(t *testing.T) {
+	t.Setenv("IAC_BLOCK_SSH_OPEN_WORLD", "1")
+	h, cleanup, err := export.NewTestHandler("file::memory:?cache=shared", mustDecodeHex(testMasterKeyHex))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer cleanup()
+	srv := httptest.NewServer(h)
+	defer srv.Close()
+
+	body := map[string]any{
+		"state": map[string]any{
+			"framework":             "terraform",
+			"cloud":                 "aws",
+			"region":                 "us-east-1",
+			"subnet_id":              "subnet-1",
+			"instance_type":         "t3.micro",
+			"ami":                   "ami-12345",
+			"ssh_cidr":              "0.0.0.0/0",
+			"security_group_ids":    []string{"sg-1"},
+			"imdsv2_required":       true,
+			"enable_ebs_encryption": true,
+		},
+	}
+	b, _ := json.Marshal(body)
+	res, err := http.Post(srv.URL+"/api/v1/preview", "application/json", bytes.NewReader(b))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer res.Body.Close()
+	if res.StatusCode != http.StatusBadRequest {
+		t.Fatalf("status %d want 400", res.StatusCode)
+	}
+	var out struct {
+		Error string `json:"error"`
+	}
+	if err := json.NewDecoder(res.Body).Decode(&out); err != nil {
+		t.Fatal(err)
+	}
+	if out.Error == "" || !strings.Contains(out.Error, "operator policy") {
+		t.Fatalf("error: %q", out.Error)
+	}
+}
+
 func mustDecodeHex(s string) []byte {
 	b, err := hex.DecodeString(s)
 	if err != nil {

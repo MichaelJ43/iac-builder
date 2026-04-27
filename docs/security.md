@@ -10,6 +10,16 @@ This is appropriate for **local development and portfolio demos**. It is **not**
 - IAM roles for workloads (IRSA, instance profiles with least privilege)
 - Short-lived credentials via `sts:AssumeRole`
 
+## Operator guardrails (self-hosted)
+
+The API can enforce **org-style** policy for everyone using your deployment via environment variables (no per-tenant store yet):
+
+| Variable | Effect |
+|----------|--------|
+| `IAC_BLOCK_SSH_OPEN_WORLD` | When set to a truthy value (`1`, `true`, `yes`, `on`), `POST /api/v1/preview` returns **400** if `ssh_cidr` is `0.0.0.0/0` or `::/0`. Users still see the usual security hint on recommendations; the guard **blocks** generating preview output until the CIDR is tightened. Unset in local dev if you need open-world for experiments. |
+
+This is a **host-level** control (same process, same app). It does not replace your own network or IAM constraints.
+
 ## Operational guidance
 
 - Scope IAM policies to **read-only** EC2 describe APIs for discovery.

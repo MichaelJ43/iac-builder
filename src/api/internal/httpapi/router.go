@@ -118,6 +118,10 @@ func (s *Server) handlePreview(w http.ResponseWriter, r *http.Request) {
 	if !readJSON(w, r, &body) {
 		return
 	}
+	if err := security.EnforceOperatorPreview(body.State); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+		return
+	}
 	files, err := gen.Preview(r.Context(), s.Reg, body.State)
 	if err != nil {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})

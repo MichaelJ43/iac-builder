@@ -89,6 +89,30 @@ func TestEvaluate_MissingSecurityGroups(t *testing.T) {
 	hasID(t, recs, "missing-security-groups")
 }
 
+func TestEvaluate_BurstCPUCredits_Burstable(t *testing.T) {
+	s := gen.WizardState{
+		SubnetID:     "subnet-1",
+		InstanceType: "T3A.small",
+		AMI:          "ami-123",
+	}
+	recs := Evaluate(s)
+	hasID(t, recs, "burst-cpu-credits")
+}
+
+func TestEvaluate_BurstCPUCredits_NotForM5(t *testing.T) {
+	s := gen.WizardState{
+		SubnetID:     "subnet-1",
+		InstanceType: "m5.large",
+		AMI:          "ami-123",
+	}
+	recs := Evaluate(s)
+	for _, r := range recs {
+		if r.ID == "burst-cpu-credits" {
+			t.Fatal("did not expect burst hint for m5")
+		}
+	}
+}
+
 func TestEvaluate_KeyPairHint(t *testing.T) {
 	s := gen.WizardState{KeyName: "my-key"}
 	recs := Evaluate(s)

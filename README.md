@@ -63,6 +63,10 @@ The wizard can call an **LLM** for optional text suggestions. **Today** the API 
 - **Extensible to more providers (future):** the roadmap is to keep the same **v1 context JSON** contract and add other backends; until then, `GET /api/v1/ai/prompt-disclosure` returns `provider: "openai"` and an empty `future_providers` list. Prompt strings live in [`src/api/internal/aiassist/prompts.go`](src/api/internal/aiassist/prompts.go) so you can audit them without the UI.
 - **Self-serve review:** the **Inspect prompting (read-only)** area in the AI assist panel, or a direct `GET /api/v1/ai/prompt-disclosure` call, returns the system prompt and parameters the server uses (no secrets).
 
+## Operator security guardrails (optional)
+
+For shared or production-like self-hosts, the API can block unsafe wizard choices before code preview, for example `IAC_BLOCK_SSH_OPEN_WORLD=1` to reject `ssh_cidr` of `0.0.0.0/0` or `::/0` on `POST /api/v1/preview`. See [`docs/security.md`](docs/security.md#operator-guardrails-self-hosted).
+
 ## Documentation
 
 - [`docs/local-dev.md`](docs/local-dev.md)

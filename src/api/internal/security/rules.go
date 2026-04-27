@@ -16,10 +16,14 @@ type Recommendation struct {
 	Tags        []string `json:"tags,omitempty"`
 }
 
-func sshCIDROpenWorld(cidr string) bool {
+// SSHCidrIsOpenWorld reports whether cidr is world-open (0.0.0.0/0 or ::/0) for
+// security hints and operator preview guardrails.
+func SSHCidrIsOpenWorld(cidr string) bool {
 	c := strings.TrimSpace(cidr)
 	return c == "0.0.0.0/0" || c == "::/0"
 }
+
+func sshCIDROpenWorld(cidr string) bool { return SSHCidrIsOpenWorld(cidr) }
 
 // sshCIDRBroad returns true for IPv4 prefixes wider than /24 or IPv6 wider than /64 (excluding world-open).
 func sshCIDRBroad(cidr string) bool {
@@ -37,6 +41,24 @@ func sshCIDRBroad(cidr string) bool {
 	}
 	ones, _ := n.Mask.Size()
 	return ones < 64
+}
+
+// isBurstableInstanceType returns true for AWS "burstable" families (t2, t3, t3a, t4g)
+// that accrue CPU credits; production workloads may need right-sizing or “unlimited.”
+func isBurstableInstanceType(instanceType string) bool {
+	s := strings.ToLower(strings.TrimSpace(instanceType))
+	switch {
+	case strings.HasPrefix(s, "t2."):
+		return true
+	case strings.HasPrefix(s, "t3."):
+		return true
+	case strings.HasPrefix(s, "t3a."):
+		return true
+	case strings.HasPrefix(s, "t4g."):
+		return true
+	default:
+		return false
+	}
 }
 
 func wizardLooksReadyForCompute(s gen.WizardState) bool {
@@ -118,6 +140,17 @@ func Evaluate(s gen.WizardState) []Recommendation {
 			Message:     "Enable root EBS encryption at rest for compliance and data protection.",
 			Remediation: "Enable Encrypt root EBS in the wizard so generated IaC requests encrypted volumes.",
 			Tags:        []string{"cis", "storage"},
+		})
+	}
+
+	// Deeper CIS-style ops: burstable can throttle under sustained load (4.x EC2, cost practices).
+	if wizardLooksReadyForCompute(s) && isBurstableInstanceType(s.InstanceType) {
+		out = append(out, Recommendation{
+			ID:          "burst-cpu-credits",
+			Severity:    "info",
+			Message:     "This instance type uses burstable CPU credits; sustained full-core usage can throttle performance. Monitor via CloudWatch; consider a larger or non-burstable class for production baselines.",
+			Remediation: "For steady workloads, prefer m, c, r, or R family (or set “unlimited”/CPU options where appropriate) after profiling. For dev/test, burstable is often sufficient.",
+			Tags:        []string{"cis", "ops", "cost"},
 		})
 	}
 

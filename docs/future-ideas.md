@@ -8,7 +8,7 @@ The table below lists **work that is not done yet**—not a history. When a row 
 
 | Priority | Theme | What’s left |
 |----------|--------|--------|
-| **P2** | Security depth | Org-wide guardrails, deeper automated CIS, **live** resource wiring to Secrets Manager / Parameter Store from the app. |
+| **P2** | Security depth | More operator env policies, deeper automated CIS, **live** resource wiring to Secrets Manager / Parameter Store from the app. |
 | **P3** | Presets & catalogs | **Versioning** (or labels), **quick-builder** stack catalog, optional team/**org** libraries. |
 | **P4** | More frameworks / emitters | CloudFormation, Pulumi, Bicep, CDK, OpenTofu, Crossplane—beyond the current **Terraform**-oriented path. |
 | **P5** | Auth & multi-user (SaaS) | Broader IdP, billing, abuse controls. |
@@ -32,9 +32,9 @@ The **P1** UX track is considered **complete** for this repo: wizard polish, val
 
 ## P2 — Security depth
 
-**Shipped (API + hints):** [`/api/v1/security/recommendations`](security.md) with CIS-style tags, remediations, SSH CIDR, SG/key-pair nudges, instance IAM policy JSON, **`secrets-manager-app-runtime`**, **`private-egress-endpoints`**, and related API-suggested wiring.
+**Shipped (API + hints):** [`/api/v1/security/recommendations`](security.md) with CIS-style tags, remediations, SSH CIDR, SG/key-pair nudges, instance IAM policy JSON, **`secrets-manager-app-runtime`**, **`private-egress-endpoints`**, burstable instance **`burst-cpu-credits`**, and optional **preview** blocking via `IAC_BLOCK_SSH_OPEN_WORLD` (see [Operator guardrails](security.md#operator-guardrails-self-hosted)).
 
-**Still to build:** match the P2 row in the table (guardrails, deeper CIS, live SM/SSM from the app).
+**Still to build:** match the P2 row in the table (additional env policies, deeper CIS, live SM/SSM from the app).
 
 ---
 
