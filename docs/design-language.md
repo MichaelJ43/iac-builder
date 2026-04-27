@@ -47,7 +47,7 @@ All tokens are defined on `:root` in `styles.css` with the prefix `--ib-` (short
 | Toolbar (secondary) | `wizard-toolbar` + `toolbar-btn` | Undo/redo, compact horizontal actions. |
 | Form step | `step` | Stack label → control; optional `help` under label. |
 | Preset diff | `preset-diff` + `preset-diff__table` | Compare baseline vs current; keep table scannable. |
-| Security hints | `hints` + `hints-item--warning` / `hints-item--info` | Warnings feel urgent; info is calmer. |
+| Security hints | `hints` + `m43-callout-hint` + `hints-item--warning` / `hints-item--info`; remediation: `m43-details--remediation` + `m43-inset` on `<pre>` | Callout and inset styling use **m43** shared tokens/classes (see [`static-assets` design.md](https://github.com/MichaelJ43/static-assets/blob/main/docs/design.md) — *Callout and inset monospace*) so light/dark matches the rest of the shell. Requires `m43-tokens.css` / `m43-primitives.css` from the same `v1/` bundle as in [`src/ui/index.html`](../src/ui/index.html). |
 | Inline error | `message--error` | For API or validation errors, not for help text. |
 | Code panel | `slider`, `slider-tab` | The tab is vertical on the right edge; `aria-expanded` on the control. |
 | Config import/export | `wizard-toolbar` (Export / Import) | File pick is visually hidden; **Export** and **Import** use `toolbar-btn--secondary` (outline) so the main column stays about the form; **Undo/Redo** stay default toolbar style. Failures use `message--error`. |
@@ -57,7 +57,7 @@ All tokens are defined on `:root` in `styles.css` with the prefix `--ib-` (short
 
 ## Color philosophy
 
-The UI uses a **slate** neutral palette with a single **blue** accent for the primary CTA, and **amber** for the security-hints “callout” panel. Errors use **red** in text and a light **rose** surface. The code drawer is **true dark** to separate “your inputs” (light) from “machine output” (dark).
+The UI uses a **slate** neutral palette with a single **blue** accent for the primary CTA, and an **amber-tinted** security-hints surface via m43 (`m43-callout-hint` / related tokens). Errors use **red** in text and a light **rose** surface. The code drawer is **true dark** to separate “your inputs” from “machine output” (dark) and does not follow the page’s day/night mode by design.
 
 ## Motion
 
