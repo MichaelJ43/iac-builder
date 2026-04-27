@@ -62,6 +62,7 @@ import { AiAssistPanel } from "./AiAssistPanel";
 import { isAiAssistUIEnabled } from "./flags";
 import { ManageProfilesModal } from "./ManageProfilesModal";
 import { validateWizardForPreview } from "./wizardValidation";
+import { subnetFieldHelp, vpcFieldHelp } from "./wizardCopy";
 
 const frameworks: { id: Framework; label: string }[] = [
   { id: "terraform", label: "Terraform (HCL)" },
@@ -790,7 +791,6 @@ export function App() {
             </p>
             {profileListErr && <p className={errorClass}>{profileListErr}</p>}
             {discovery.error && <p className={errorClass}>{discovery.error}</p>}
-            {discovery.discoveryNote && <p className="help">{discovery.discoveryNote}</p>}
             <div className="profile-inline">
               <p className="profile-inline__summary" aria-live="polite">
                 {activeProfile ? (
@@ -830,6 +830,11 @@ export function App() {
         )}
         {canShowNetwork && (
           <>
+            {discovery.discoveryNote && (
+              <p className="help m43-discovery-callout" role="status">
+                {discovery.discoveryNote}
+              </p>
+            )}
             {isAwsCloud(state.cloud) && selectedProfileId && (discovery.loading || discovery.loadingSubnets) && (
               <p className="help" aria-live="polite">
                 Loading AWS read-only suggestions for this profile and region…
@@ -842,18 +847,11 @@ export function App() {
               suggestions={vpcOpts}
               placeholder={vpcFieldPlaceholder(state.cloud || "aws")}
               busy={discoveryListLoading}
-              help={
-                isAwsCloud(state.cloud) && selectedProfileId ? (
-                  <>
-                    Suggested networks in <strong>{state.region || "this region"}</strong> (read-only). Choose a VPC
-                    to filter subnets and security groups, or type any id.
-                  </>
-                ) : isAwsCloud(state.cloud) ? (
-                  "Select a credential profile to load suggestions, or type a VPC id manually."
-                ) : (
-                  "No live list for this cloud; paste a full resource name or id from your project."
-                )
-              }
+              help={vpcFieldHelp(
+                isAwsCloud(state.cloud),
+                selectedProfileId.trim() !== "",
+                state.region
+              )}
               aria-label={networkLabels.vpc}
             />
             <ComboboxField
@@ -863,16 +861,7 @@ export function App() {
               suggestions={subnetOpts}
               placeholder={subnetFieldPlaceholder(state.cloud || "aws")}
               busy={discoverySubnetSgLoading}
-              help={
-                isAwsCloud(state.cloud) ? (
-                  <>
-                    Required for the VM. With a <strong>parent network</strong> and profile, we list AWS subnets; you
-                    can still paste any subnet id.
-                  </>
-                ) : (
-                  "Required. Enter the subnetwork or subnet resource id for your project."
-                )
-              }
+              help={subnetFieldHelp(isAwsCloud(state.cloud))}
               error={fieldErr.subnet_id}
               aria-label={networkLabels.subnet}
             />

@@ -116,6 +116,14 @@ body {
 .m43-start-from .help {
   margin: 0;
 }
+.m43-discovery-callout {
+  background: var(--ib-bg-hint);
+  border: 1px solid var(--ib-border-hint);
+  border-radius: var(--ib-radius-md);
+  padding: 0.5rem 0.75rem;
+  margin: 0 0 0.5rem;
+  max-width: 42rem;
+}
 .slider {
   width: var(--ib-slider-width);
   border-left: 1px solid var(--ib-border);
