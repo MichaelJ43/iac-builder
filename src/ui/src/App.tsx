@@ -286,6 +286,22 @@ export function App() {
   const cloudErrId = useId();
   const sgErrId = useId();
 
+  const wizardStep = useMemo(() => {
+    if (!state.framework) {
+      return { index: 1, title: "Target", detail: "Choose an IaC framework and cloud." };
+    }
+    if (!state.region.trim()) {
+      return { index: 2, title: "Location", detail: "Set region (or namespace / DC label for some targets)." };
+    }
+    if (!state.subnet_id.trim()) {
+      return { index: 3, title: "Network", detail: "Subnet, host, or port group—required for every target." };
+    }
+    if (!canPreview) {
+      return { index: 4, title: "Compute", detail: "Instance size, image, and options." };
+    }
+    return { index: 5, title: "Ready", detail: "Preview updates on the right; review security hints below." };
+  }, [state.framework, state.region, state.subnet_id, canPreview]);
+
   const refresh = useCallback(async () => {
     if (!canPreview) {
       setPreviewText("");
@@ -570,6 +586,7 @@ export function App() {
   }, [selectedPresetId, presets]);
 
   const toolbarButtonClass = "toolbar-btn m43-button";
+  const toolbarButtonSecondaryClass = "toolbar-btn m43-button toolbar-btn--secondary";
   const fieldClass = "step m43-field";
   const inputClass = "m43-input";
   const errorClass = "message--error m43-message--error";
@@ -614,7 +631,7 @@ export function App() {
           <button type="button" className={toolbarButtonClass} onClick={redo} disabled={!canRedo}>
             Redo
           </button>
-          <button type="button" className={toolbarButtonClass} onClick={exportConfiguration}>
+          <button type="button" className={toolbarButtonSecondaryClass} onClick={exportConfiguration}>
             Export configuration
           </button>
           <input
@@ -706,6 +723,39 @@ export function App() {
           {selectedStarter && <p className="help">{selectedStarter.description}</p>}
         </div>
         {err && <p className={errorClass}>{err}</p>}
+
+        <nav className="wizard-stepper" aria-labelledby="wizard-step-current">
+          <ol className="wizard-stepper__track">
+            {(
+              [
+                [1, "Target"],
+                [2, "Location"],
+                [3, "Network"],
+                [4, "Compute"],
+                [5, "Ready"],
+              ] as const
+            ).map(([n, label]) => (
+              <li
+                key={n}
+                className={
+                  n < wizardStep.index
+                    ? "wizard-stepper__step wizard-stepper__step--done"
+                    : n === wizardStep.index
+                      ? "wizard-stepper__step wizard-stepper__step--current"
+                      : "wizard-stepper__step"
+                }
+              >
+                <span className="wizard-stepper__num" aria-hidden="true">
+                  {n}
+                </span>
+                <span className="wizard-stepper__name">{label}</span>
+              </li>
+            ))}
+          </ol>
+          <p className="help wizard-stepper__current" id="wizard-step-current">
+            Step {wizardStep.index} of 5: <strong>{wizardStep.title}</strong> — {wizardStep.detail}
+          </p>
+        </nav>
 
         <div className={fieldClass}>
           <label htmlFor="wizard-framework">IaC framework</label>

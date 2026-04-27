@@ -50,7 +50,8 @@ All tokens are defined on `:root` in `styles.css` with the prefix `--ib-` (short
 | Security hints | `hints` + `hints-item--warning` / `hints-item--info` | Warnings feel urgent; info is calmer. |
 | Inline error | `message--error` | For API or validation errors, not for help text. |
 | Code panel | `slider`, `slider-tab` | The tab is vertical on the right edge; `aria-expanded` on the control. |
-| Config import/export | `wizard-toolbar` (Export / Import) | File pick is visually hidden; the Import button is keyboard-accessible and labeled; failures use `message--error`. |
+| Config import/export | `wizard-toolbar` (Export / Import) | File pick is visually hidden; **Export** and **Import** use `toolbar-btn--secondary` (outline) so the main column stays about the form; **Undo/Redo** stay default toolbar style. Failures use `message--error`. |
+| Wizard progress | `wizard-stepper` | Five labeled steps (Target → Ready); current step uses accent ring. Announced via `aria-labelledby` on the “Step N of 5” line. |
 | Starter catalog | `step.starter-catalog` + `preset-compare__row` | Bundled templates use the same control row as preset compare; a second `help` line explains the active starter. |
 | AI assist (opt-in) | `ai-assist` + `toolbar-btn` + `ai-assist__pre` | Gated by `VITE_IAC_AI_ASSIST`; no LLM in default build; see [`docs/ai-assist.md`](ai-assist.md). |
 
