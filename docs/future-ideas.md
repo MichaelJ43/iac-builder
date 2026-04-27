@@ -8,7 +8,6 @@ The table below lists **work that is not done yet**—not a history. When a row 
 
 | Priority | Theme | What’s left |
 |----------|--------|--------|
-| **P8** | Non-cloud & hybrid | Kubernetes packaging, on-prem Ansible, VMware. |
 | **P9** | Operations | Hosted posture, **opt-in** telemetry, multi-region API. |
 
 *Maintainers: delete a row when its “What’s left” is empty.*
@@ -43,6 +42,10 @@ The **P4** track is **complete** for this repo at the current scope: the wizard 
 ### Completed — P7 (More cloud providers)
 
 The **P7** track is **complete** for this repo at the current scope: the wizard can target **AWS**, **Google Cloud**, or **Oracle Cloud**; **Terraform / OpenTofu** on GCP and OCI emit **starter** `main.tf` (not full parity with the AWS emitters). **Credential profiles remain AWS-only** for read-only API discovery. The API exposes a **cloud-neutral discovery JSON** (`/api/v1/profiles/{id}/discovery/...`) for networks, subnets, security groups, and images—**fully wired for AWS**, with `status: unavailable` and guidance for GCP/OCI until provider credentials exist.
+
+### Completed — P8 (Non-cloud & hybrid)
+
+The **P8** track is **complete** for this repo at the current scope: the wizard can target **Kubernetes** (`k8s`), **Ansible (on-prem)** (`ansible`), or **VMware vSphere** (`vmware`) alongside the public clouds. **Terraform / OpenTofu** emit **starter** artifacts: Kubernetes **Deployment** + **Service** under `k8s/`, **Ansible** `playbook.yml` + `inventory.ini`, and **vSphere** `main.tf` (OpenTofu gets the same header as other HCL). **Other frameworks** (Pulumi, CDK, etc.) are not implemented for these targets and return a clear error, matching GCP/OCI. **Discovery** remains `status: unavailable` with manual entry. See **P8** reference below.
 
 ---
 
@@ -83,9 +86,9 @@ This section records a **product roadmap shape** for a commercial, multi-tenant 
 
 ---
 
-## P8 — Non-cloud and hybrid
+## P8 — Non-cloud and hybrid (reference)
 
-Kubernetes packaging, on-prem Ansible, VMware. See the P8 row in the table.
+**Shipped:** see **Completed — P8** above. Wizard `cloud` values: `k8s`, `ansible`, `vmware`. Preview uses the same required fields (region, subnet, instance type, image) with **labels** in the UI tailored to each target.
 
 ---
 

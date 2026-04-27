@@ -39,7 +39,7 @@ export function coerceWizardState(raw: unknown): WizardState {
     framework = fw as Framework;
   }
 
-  const allowedCloud: readonly string[] = ["aws", "gcp", "oci"];
+  const allowedCloud: readonly string[] = ["aws", "gcp", "oci", "k8s", "ansible", "vmware"];
   let cloud: WizardState["cloud"] = d.cloud;
   if (typeof root.cloud === "string" && allowedCloud.includes(root.cloud)) {
     cloud = root.cloud as CloudId;

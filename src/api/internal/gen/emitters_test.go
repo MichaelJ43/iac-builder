@@ -100,6 +100,54 @@ func TestOpenTofu_NonAWS_Preview(t *testing.T) {
 	}
 }
 
+func TestPreview_K8s_Terraform(t *testing.T) {
+	s := minimalValidState(FrameworkTerraform)
+	s.Cloud = CloudK8s
+	s.Region = "default"
+	s.SubnetID = "services"
+	s.AMI = "my.registry/app:1"
+	files, err := previewNonAWS(s)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(files["k8s/deployment.yaml"], "kind: Deployment") {
+		t.Fatal("expected Deployment in k8s/deployment.yaml")
+	}
+	if !strings.Contains(files["k8s/service.yaml"], "kind: Service") {
+		t.Fatal("expected Service in k8s/service.yaml")
+	}
+}
+
+func TestPreview_Ansible_Terraform(t *testing.T) {
+	s := minimalValidState(FrameworkTerraform)
+	s.Cloud = CloudAnsible
+	s.Region = "onprem"
+	s.SubnetID = "192.0.2.5"
+	files, err := previewNonAWS(s)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(files["ansible/playbook.yml"], "hosts: onprem") {
+		t.Fatal("expected inventory group in playbook")
+	}
+}
+
+func TestPreview_VMware_OpenTofu(t *testing.T) {
+	s := minimalValidState(FrameworkOpenTofu)
+	s.Cloud = CloudVMware
+	files, err := previewNonAWS(s)
+	if err != nil {
+		t.Fatal(err)
+	}
+	tf := files["main.tf"]
+	if !strings.HasPrefix(tf, "# OpenTofu:") {
+		t.Fatal("expected OpenTofu header for VMware")
+	}
+	if !strings.Contains(tf, "vsphere_virtual_machine") {
+		t.Fatal("expected vsphere_virtual_machine in main.tf")
+	}
+}
+
 func TestNonAWS_UnsupportedFramework(t *testing.T) {
 	s := minimalValidState(FrameworkPulumi)
 	s.Cloud = CloudGCP

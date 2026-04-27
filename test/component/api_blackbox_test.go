@@ -299,6 +299,45 @@ func TestPreview_GCP_Terraform(t *testing.T) {
 	}
 }
 
+func TestPreview_K8s_Terraform(t *testing.T) {
+	h, cleanup, err := export.NewTestHandler("file::memory:?cache=shared", mustDecodeHex(testMasterKeyHex))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer cleanup()
+	s := httptest.NewServer(h)
+	defer s.Close()
+
+	body := map[string]any{
+		"state": map[string]any{
+			"framework":     "terraform",
+			"cloud":         "k8s",
+			"region":        "production",
+			"vpc_id":        "",
+			"subnet_id":     "services",
+			"instance_type": "1cpu-512m",
+			"ami":           "nginx:1.25",
+		},
+	}
+	b, _ := json.Marshal(body)
+	res, err := http.Post(s.URL+"/api/v1/preview", "application/json", bytes.NewReader(b))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.StatusCode != http.StatusOK {
+		t.Fatalf("status %d", res.StatusCode)
+	}
+	var out struct {
+		Files map[string]string `json:"files"`
+	}
+	if err := json.NewDecoder(res.Body).Decode(&out); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(out.Files["k8s/deployment.yaml"], "kind: Deployment") {
+		t.Fatal("expected Kubernetes deployment manifest")
+	}
+}
+
 func TestPreview_Blocked_SSH_OperatorGuard(t *testing.T) {
 	t.Setenv("IAC_BLOCK_SSH_OPEN_WORLD", "1")
 	h, cleanup, err := export.NewTestHandler("file::memory:?cache=shared", mustDecodeHex(testMasterKeyHex))
