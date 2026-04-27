@@ -27,7 +27,7 @@ Or individually:
 - `cd src/api && GOSUMDB=off go test ./...`
 - `cd test/component && GOSUMDB=off go test ./...`
 - `cd src/ui && npm ci && npm run test:unit` (and `npm run test:unit:coverage` when checking coverage thresholds)
-- `cd test/ui && npm ci && npx playwright install chromium && npm test` (set `CI=true` for non-interactive).
+- `cd test/ui && npm ci && npx playwright install chromium && npm test` (e2e Vite uses port **33331** by default, via [`test/ui/playwright.config.ts`](test/ui/playwright.config.ts), to avoid clashing with a dev server on 5173; override with `PLAYWRIGHT_VITE_PORT`. GitHub Actions sets `CI=true` so each job starts fresh servers. Local `make test` does not force `CI=true` for Playwright so `reuseExistingServer` can apply.)
 
 ## Test coverage expectations
 
