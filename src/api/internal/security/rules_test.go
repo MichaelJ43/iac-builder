@@ -31,6 +31,15 @@ func TestEvaluate_IMDSv2(t *testing.T) {
 	hasID(t, recs, "imdsv2")
 }
 
+func TestEvaluate_NonAWS_NoImdsv2(t *testing.T) {
+	s := gen.WizardState{Cloud: "gcp", IMDSv2Required: false, SubnetID: "x", InstanceType: "e2", AMI: "y"}
+	for _, r := range Evaluate(s) {
+		if r.ID == "imdsv2" {
+			t.Fatal("imdsv2 should not apply to gcp")
+		}
+	}
+}
+
 func TestEvaluate_SSHOpenWorld(t *testing.T) {
 	s := gen.WizardState{SSHCIDR: "0.0.0.0/0"}
 	recs := Evaluate(s)

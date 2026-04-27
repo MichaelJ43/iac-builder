@@ -259,6 +259,46 @@ func TestPreview_Pulumi(t *testing.T) {
 	}
 }
 
+func TestPreview_GCP_Terraform(t *testing.T) {
+	h, cleanup, err := export.NewTestHandler("file::memory:?cache=shared", mustDecodeHex(testMasterKeyHex))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer cleanup()
+	s := httptest.NewServer(h)
+	defer s.Close()
+
+	body := map[string]any{
+		"state": map[string]any{
+			"framework":          "terraform",
+			"cloud":              "gcp",
+			"region":             "us-central1",
+			"vpc_id":             "",
+			"subnet_id":          "projects/p/regions/us-central1/subnetworks/default",
+			"instance_type":      "e2-medium",
+			"ami":                "debian-12",
+			"security_group_ids": []string{},
+		},
+	}
+	b, _ := json.Marshal(body)
+	res, err := http.Post(s.URL+"/api/v1/preview", "application/json", bytes.NewReader(b))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.StatusCode != http.StatusOK {
+		t.Fatalf("status %d", res.StatusCode)
+	}
+	var out struct {
+		Files map[string]string `json:"files"`
+	}
+	if err := json.NewDecoder(res.Body).Decode(&out); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(out.Files["main.tf"], "google_compute_instance") {
+		t.Fatal("expected GCP starter in main.tf")
+	}
+}
+
 func TestPreview_Blocked_SSH_OperatorGuard(t *testing.T) {
 	t.Setenv("IAC_BLOCK_SSH_OPEN_WORLD", "1")
 	h, cleanup, err := export.NewTestHandler("file::memory:?cache=shared", mustDecodeHex(testMasterKeyHex))

@@ -2,11 +2,11 @@
 import { renderHook, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import * as cred from "@ui/credentialApi";
-import { useAwsDiscovery } from "@ui/useAwsDiscovery";
+import { useCloudDiscovery } from "@ui/useCloudDiscovery";
 
-describe("useAwsDiscovery", () => {
+describe("useCloudDiscovery", () => {
   beforeEach(() => {
-    vi.spyOn(cred, "listVPCsForProfile").mockResolvedValue([{ id: "vpc-1", is_default: false }]);
+    vi.spyOn(cred, "listNetworksForProfile").mockResolvedValue([{ id: "vpc-1", is_default: false }]);
     vi.spyOn(cred, "listKeyPairsForProfile").mockResolvedValue([{ name: "kp" }]);
     vi.spyOn(cred, "listAMISuggestionsForProfile").mockResolvedValue([{ id: "ami-1", name: "al2" }]);
     vi.spyOn(cred, "listSubnetsForProfile").mockResolvedValue([{ id: "sn-1", az: "use1-az1" }]);
@@ -16,13 +16,14 @@ describe("useAwsDiscovery", () => {
     vi.restoreAllMocks();
   });
 
-  it("loads vpcs and keys when profile and region set", async () => {
+  it("loads vpcs and keys when profile and region set (AWS)", async () => {
     const { result, rerender } = renderHook(
-      ({ pid, reg, vpc }: { pid: string; reg: string; vpc: string }) => useAwsDiscovery(pid, reg, vpc),
-      { initialProps: { pid: "", reg: "", vpc: "" } }
+      ({ cloud, pid, reg, vpc }: { cloud: string; pid: string; reg: string; vpc: string }) =>
+        useCloudDiscovery(cloud as "aws", pid, reg, vpc),
+      { initialProps: { cloud: "aws", pid: "", reg: "", vpc: "" } }
     );
     expect(result.current.vpcs).toEqual([]);
-    rerender({ pid: "p1", reg: "us-east-1", vpc: "" });
+    rerender({ cloud: "aws", pid: "p1", reg: "us-east-1", vpc: "" });
     await waitFor(
       () => {
         expect(result.current.vpcs.some((v) => v.id === "vpc-1")).toBe(true);
@@ -32,12 +33,13 @@ describe("useAwsDiscovery", () => {
     expect(result.current.keyPairs).toEqual([{ name: "kp" }]);
   });
 
-  it("loads subnets when vpc set", async () => {
+  it("loads subnets when vpc set (AWS)", async () => {
     const { result, rerender } = renderHook(
-      ({ pid, reg, vpc }: { pid: string; reg: string; vpc: string }) => useAwsDiscovery(pid, reg, vpc),
-      { initialProps: { pid: "p1", reg: "us-east-1", vpc: "" } }
+      ({ cloud, pid, reg, vpc }: { cloud: string; pid: string; reg: string; vpc: string }) =>
+        useCloudDiscovery(cloud as "aws", pid, reg, vpc),
+      { initialProps: { cloud: "aws", pid: "p1", reg: "us-east-1", vpc: "" } }
     );
-    rerender({ pid: "p1", reg: "us-east-1", vpc: "vpc-1" });
+    rerender({ cloud: "aws", pid: "p1", reg: "us-east-1", vpc: "vpc-1" });
     await waitFor(
       () => {
         expect(result.current.subnets.length).toBe(1);
@@ -46,7 +48,7 @@ describe("useAwsDiscovery", () => {
     );
   });
 
-  it("sets loading true until the primary batch resolves", async () => {
+  it("sets loading true until the primary batch resolves (AWS)", async () => {
     type VPC = { id: string; is_default: boolean };
     type KP = { name: string };
     type AMI = { id: string; name: string };
@@ -62,14 +64,15 @@ describe("useAwsDiscovery", () => {
     const pA = new Promise<AMI[]>((r) => {
       resolveA = r;
     });
-    vi.spyOn(cred, "listVPCsForProfile").mockReturnValue(pV);
+    vi.spyOn(cred, "listNetworksForProfile").mockReturnValue(pV);
     vi.spyOn(cred, "listKeyPairsForProfile").mockReturnValue(pK);
     vi.spyOn(cred, "listAMISuggestionsForProfile").mockReturnValue(pA);
     const { result, rerender } = renderHook(
-      ({ pid, reg, vpc }: { pid: string; reg: string; vpc: string }) => useAwsDiscovery(pid, reg, vpc),
-      { initialProps: { pid: "", reg: "", vpc: "" } }
+      ({ cloud, pid, reg, vpc }: { cloud: string; pid: string; reg: string; vpc: string }) =>
+        useCloudDiscovery(cloud as "aws", pid, reg, vpc),
+      { initialProps: { cloud: "aws", pid: "", reg: "", vpc: "" } }
     );
-    rerender({ pid: "p1", reg: "us-east-1", vpc: "" });
+    rerender({ cloud: "aws", pid: "p1", reg: "us-east-1", vpc: "" });
     await waitFor(
       () => {
         expect(result.current.loading).toBe(true);
@@ -88,15 +91,16 @@ describe("useAwsDiscovery", () => {
     );
   });
 
-  it("sets error when vpcs call fails", async () => {
-    vi.spyOn(cred, "listVPCsForProfile").mockRejectedValue(new Error("network"));
+  it("sets error when networks call fails (AWS)", async () => {
+    vi.spyOn(cred, "listNetworksForProfile").mockRejectedValue(new Error("network"));
     vi.spyOn(cred, "listKeyPairsForProfile").mockRejectedValue(new Error("network"));
     vi.spyOn(cred, "listAMISuggestionsForProfile").mockRejectedValue(new Error("network"));
     const { result, rerender } = renderHook(
-      ({ pid, reg, vpc }: { pid: string; reg: string; vpc: string }) => useAwsDiscovery(pid, reg, vpc),
-      { initialProps: { pid: "", reg: "", vpc: "" } }
+      ({ cloud, pid, reg, vpc }: { cloud: string; pid: string; reg: string; vpc: string }) =>
+        useCloudDiscovery(cloud as "aws", pid, reg, vpc),
+      { initialProps: { cloud: "aws", pid: "", reg: "", vpc: "" } }
     );
-    rerender({ pid: "p1", reg: "us-east-1", vpc: "" });
+    rerender({ cloud: "aws", pid: "p1", reg: "us-east-1", vpc: "" });
     await waitFor(
       () => {
         expect(result.current.error).toMatch(/network/);

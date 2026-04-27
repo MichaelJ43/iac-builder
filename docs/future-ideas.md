@@ -1,6 +1,6 @@
 # Future ideas and roadmap
 
-This document captures **post-MVP** and **in-flight** product directions. For current behavior, see the root [`README.md`](../README.md) and the main wizard column in [`src/ui/src/App.tsx`](../src/ui/src/App.tsx) (intended read order: starter shortcuts → **framework / region** → **optional API credential profile** → **network & compute** → **server presets** (optional) → **security hints** and optional AI assist).
+This document captures **post-MVP** and **in-flight** product directions. For current behavior, see the root [`README.md`](../README.md) and the main wizard column in [`src/ui/src/App.tsx`](../src/ui/src/App.tsx) (intended read order: starter shortcuts → **framework / cloud / region** → **optional API credential profile (AWS discovery)** → **network & compute** → **server presets** (optional) → **security hints** and optional AI assist).
 
 ## Priority overview (outstanding work only)
 
@@ -8,13 +8,12 @@ The table below lists **work that is not done yet**—not a history. When a row 
 
 | Priority | Theme | What’s left |
 |----------|--------|--------|
-| **P5** | Auth & multi-user (SaaS) | Broader IdP, billing, abuse controls. |
-| **P6** | Cloud onboarding | SSO, assumed roles, identity from CI, workload identity. |
-| **P7** | More cloud providers | GCP, OCI, shared discovery shape. |
 | **P8** | Non-cloud & hybrid | Kubernetes packaging, on-prem Ansible, VMware. |
 | **P9** | Operations | Hosted posture, **opt-in** telemetry, multi-region API. |
 
 *Maintainers: delete a row when its “What’s left” is empty.*
+
+**P5 and P6** are not in-repo priorities; they are captured only under [**Commercialization Plan**](#commercialization-plan-out-of-scope) (out of scope for this project).
 
 ### Completed — P1 (UX & polish)
 
@@ -41,6 +40,10 @@ The **P3** presets/catalog track is **complete** for this repo at the current sc
 
 The **P4** track is **complete** for this repo at the current scope: the wizard can emit **OpenTofu** (HCL, Terraform-shaped), **Pulumi** (TypeScript), **AWS CDK** (v2 TypeScript, L1 EC2), **Azure Bicep** (syntactically valid placeholder that explains the app is AWS-EC2–centric), and **Crossplane** (Upbound `ec2.aws` Instance), alongside existing **Terraform** and **CloudFormation** targets.
 
+### Completed — P7 (More cloud providers)
+
+The **P7** track is **complete** for this repo at the current scope: the wizard can target **AWS**, **Google Cloud**, or **Oracle Cloud**; **Terraform / OpenTofu** on GCP and OCI emit **starter** `main.tf` (not full parity with the AWS emitters). **Credential profiles remain AWS-only** for read-only API discovery. The API exposes a **cloud-neutral discovery JSON** (`/api/v1/profiles/{id}/discovery/...`) for networks, subnets, security groups, and images—**fully wired for AWS**, with `status: unavailable` and guidance for GCP/OCI until provider credentials exist.
+
 ---
 
 ## P2 — Security depth (reference)
@@ -61,23 +64,22 @@ The **P4** track is **complete** for this repo at the current scope: the wizard 
 
 ---
 
-## P5 — Authentication and multi-user
+## Commercialization Plan (out of scope)
 
-**Current in-tree:** platform session, per-user encrypted profiles in **SQLite** for hosted deploys.
+This section records a **product roadmap shape** for a commercial, multi-tenant service. **This repository will not implement or track P5 / P6 as active work**—they are listed here for clarity about what a full SaaS might include beyond the current learning/portfolio scope.
 
-**Still to build:** see the P5 row in the table (broader IdP, billing, abuse controls).
+| Label | Theme | What a commercial product might pursue |
+|-------|--------|----------------------------------------|
+| **P5** | Auth & multi-user (SaaS) | Broader IdP, billing, abuse controls. |
+| **P6** | Cloud onboarding | SSO, assumed roles, identity from CI, workload identity, Azure Managed Identity for app tier, etc. |
+
+**Already in this repo (not “done P5”):** platform session, per-user encrypted **AWS** profiles in **SQLite** on hosted deploys remain the supported baseline; that does *not* commit the project to IdP, billing, or the rest of a commercialization stack.
 
 ---
 
-## P6 — Cloud onboarding
+## P7 — More cloud providers (reference)
 
-SSO, assumed roles, identity from CI, Azure Managed Identity for app tier. See the P6 row in the table.
-
----
-
-## P7 — More cloud providers
-
-GCP, OCI, etc. See the P7 row in the table.
+**Shipped:** see **Completed — P7** above.
 
 ---
 

@@ -1,4 +1,4 @@
-import { FRAMEWORK_IDS, type Framework, type WizardState } from "./api";
+import { FRAMEWORK_IDS, type CloudId, type Framework, type WizardState } from "./api";
 
 export type WizardFieldErrorKey = keyof WizardState;
 
@@ -17,9 +17,11 @@ export function validateWizardForPreview(state: WizardState): {
   if (!framework || !FRAMEWORK_IDS.includes(framework as Framework)) {
     fields.framework = "Select an IaC framework.";
   }
-  if (state.cloud !== "aws") {
-    fields.cloud = "This MVP only supports AWS.";
+  const allowedClouds: CloudId[] = ["aws", "gcp", "oci"];
+  if (!state.cloud || !allowedClouds.includes(state.cloud as CloudId)) {
+    fields.cloud = "Select a cloud (AWS, Google Cloud, or OCI).";
   }
+  const isAws = (state.cloud as string) === "aws" || !state.cloud;
 
   const region = state.region.trim();
   if (!region) {
@@ -28,9 +30,9 @@ export function validateWizardForPreview(state: WizardState): {
 
   const subnet = state.subnet_id.trim();
   if (!subnet) {
-    fields.subnet_id = "Subnet ID is required.";
-  } else if (subnet.length >= 8 && !subnet.toLowerCase().startsWith("subnet-")) {
-    fields.subnet_id = "Subnet ids usually start with subnet- (e.g. subnet-0abc12…).";
+    fields.subnet_id = "Subnet (or subnetwork) is required.";
+  } else if (isAws && subnet.length >= 8 && !subnet.toLowerCase().startsWith("subnet-")) {
+    fields.subnet_id = "AWS subnet ids usually start with subnet- (e.g. subnet-0abc12…).";
   }
 
   const instanceType = state.instance_type.trim();
@@ -40,15 +42,15 @@ export function validateWizardForPreview(state: WizardState): {
 
   const ami = state.ami.trim();
   if (!ami) {
-    fields.ami = "AMI ID is required.";
-  } else if (ami.length >= 5 && !ami.toLowerCase().startsWith("ami-")) {
-    fields.ami = "AMI ids start with ami- (e.g. ami-0abc12…).";
+    fields.ami = isAws ? "AMI ID is required." : "Image / OCID is required for this cloud.";
+  } else if (isAws && ami.length >= 5 && !ami.toLowerCase().startsWith("ami-")) {
+    fields.ami = "On AWS, AMI ids start with ami- (e.g. ami-0abc12…).";
   }
 
   for (const raw of state.security_group_ids) {
     const s = raw.trim();
-    if (s && !/^sg-[a-f0-9-]+$/i.test(s)) {
-      fields.security_group_ids = `“${s}” is not a valid security group id; use values like sg-0abc12….`;
+    if (isAws && s && !/^sg-[a-f0-9-]+$/i.test(s)) {
+      fields.security_group_ids = `“${s}” is not a valid AWS security group id; use values like sg-0abc12….`;
       break;
     }
   }

@@ -1,9 +1,11 @@
 package gen
 
+import "strings"
+
 // WizardState is the canonical wizard payload for preview/download.
 type WizardState struct {
 	Framework Framework `json:"framework"`
-	Cloud     string    `json:"cloud"` // "aws" | "azure"
+	Cloud     string    `json:"cloud"` // "aws" | "gcp" | "oci"
 
 	Region string `json:"region"`
 
@@ -28,7 +30,11 @@ func (s WizardState) Validate() error {
 	if _, ok := ParseFramework(string(s.Framework)); !ok || s.Framework == "" {
 		return ErrInvalidFramework
 	}
-	if s.Cloud != "aws" {
+	cloud := strings.TrimSpace(s.Cloud)
+	if cloud == "" {
+		cloud = CloudAWS
+	}
+	if _, ok := ParseCloud(cloud); !ok {
 		return ErrUnsupportedCloud
 	}
 	if s.Region == "" {

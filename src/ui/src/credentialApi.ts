@@ -1,5 +1,6 @@
 import { withCredentials } from "./fetchWithCredentials";
 import { normalizeFetchError } from "./fetchUtils";
+import type { CloudId } from "./api";
 
 const base = "";
 
@@ -86,48 +87,60 @@ export async function deleteCredentialProfile(id: string): Promise<void> {
 
 export type VPCRow = { id: string; is_default: boolean };
 export type SubnetRow = { id: string; az: string };
+/** Shared discovery: subnet zone (maps to "az" in the UI for AWS). */
+export type NetworkAPIModel = { id: string; display_name?: string; is_default: boolean; cloud: string; region?: string };
 export type SGRow = { id: string; name: string };
 export type KeyPairRow = { name: string };
 export type AMIInfo = { id: string; name: string };
 
-export async function listVPCsForProfile(profileId: string, region: string): Promise<VPCRow[]> {
-  const q = new URLSearchParams({ region });
+export async function listNetworksForProfile(
+  profileId: string,
+  region: string,
+  cloud: CloudId
+): Promise<VPCRow[]> {
+  const q = new URLSearchParams({ region, cloud });
   const res = await fetch(
-    `${base}/api/v1/profiles/${encodeURIComponent(profileId)}/aws/vpcs?${q}`,
+    `${base}/api/v1/profiles/${encodeURIComponent(profileId)}/discovery/networks?${q}`,
     withCredentials
   );
   if (!res.ok) {
     throw new Error(await normalizeFetchError(res));
   }
-  const data = (await res.json()) as { vpcs?: VPCRow[] };
-  return data.vpcs ?? [];
+  const data = (await res.json()) as { networks?: NetworkAPIModel[] };
+  return (data.networks ?? []).map((n) => ({ id: n.id, is_default: n.is_default }));
+}
+
+export async function listVPCsForProfile(profileId: string, region: string): Promise<VPCRow[]> {
+  return listNetworksForProfile(profileId, region, "aws");
 }
 
 export async function listSubnetsForProfile(
   profileId: string,
   region: string,
-  vpcId: string
+  vpcId: string,
+  cloud: CloudId = "aws"
 ): Promise<SubnetRow[]> {
-  const q = new URLSearchParams({ region, vpc_id: vpcId });
+  const q = new URLSearchParams({ region, network_id: vpcId, cloud });
   const res = await fetch(
-    `${base}/api/v1/profiles/${encodeURIComponent(profileId)}/aws/subnets?${q}`,
+    `${base}/api/v1/profiles/${encodeURIComponent(profileId)}/discovery/subnets?${q}`,
     withCredentials
   );
   if (!res.ok) {
     throw new Error(await normalizeFetchError(res));
   }
-  const data = (await res.json()) as { subnets?: SubnetRow[] };
-  return data.subnets ?? [];
+  const data = (await res.json()) as { subnets?: { id: string; zone: string }[] };
+  return (data.subnets ?? []).map((s) => ({ id: s.id, az: s.zone }));
 }
 
 export async function listSecurityGroupsForProfile(
   profileId: string,
   region: string,
-  vpcId: string
+  vpcId: string,
+  cloud: CloudId = "aws"
 ): Promise<SGRow[]> {
-  const q = new URLSearchParams({ region, vpc_id: vpcId });
+  const q = new URLSearchParams({ region, network_id: vpcId, cloud });
   const res = await fetch(
-    `${base}/api/v1/profiles/${encodeURIComponent(profileId)}/aws/security-groups?${q}`,
+    `${base}/api/v1/profiles/${encodeURIComponent(profileId)}/discovery/security-groups?${q}`,
     withCredentials
   );
   if (!res.ok) {
@@ -152,16 +165,17 @@ export async function listKeyPairsForProfile(profileId: string, region: string):
 
 export async function listAMISuggestionsForProfile(
   profileId: string,
-  region: string
+  region: string,
+  cloud: CloudId = "aws"
 ): Promise<AMIInfo[]> {
-  const q = new URLSearchParams({ region });
+  const q = new URLSearchParams({ region, cloud });
   const res = await fetch(
-    `${base}/api/v1/profiles/${encodeURIComponent(profileId)}/aws/ami-suggestions?${q}`,
+    `${base}/api/v1/profiles/${encodeURIComponent(profileId)}/discovery/compute-images?${q}`,
     withCredentials
   );
   if (!res.ok) {
     throw new Error(await normalizeFetchError(res));
   }
-  const data = (await res.json()) as { amis?: AMIInfo[] };
-  return data.amis ?? [];
+  const data = (await res.json()) as { images?: { id: string; name: string }[] };
+  return (data.images ?? []).map((i) => ({ id: i.id, name: i.name }));
 }

@@ -9,6 +9,8 @@ dist/
 coverage/
 playwright-report/
 test-results/
+# Project-local Playwright browser cache (see Makefile PLAYWRIGHT_BROWSERS_PATH)
+test/ui/.playwright-browsers/
 *.log
 *.tsbuildinfo
 .idea/

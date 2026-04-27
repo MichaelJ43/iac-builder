@@ -75,4 +75,15 @@ describe("validateWizardForPreview", () => {
     s.ssh_cidr = "10.0.0.0/8";
     expect(validateWizardForPreview(s).ok).toBe(true);
   });
+
+  it("accepts a minimal valid GCP state (no AWS subnet/ami shape)", () => {
+    const s = validAwsBase();
+    s.cloud = "gcp";
+    s.subnet_id = "projects/p/regions/us-central1/subnetworks/default";
+    s.ami = "debian-12";
+    s.security_group_ids = [];
+    const { ok, fields } = validateWizardForPreview(s);
+    expect(ok).toBe(true);
+    expect(Object.keys(fields).length).toBe(0);
+  });
 });

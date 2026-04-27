@@ -52,7 +52,8 @@ func EnforceOperatorPreview(s gen.WizardState) error {
 	if b.blockSSH && SSHCidrIsOpenWorld(s.SSHCIDR) {
 		return ErrBlockedSSHOpenWorld
 	}
-	if b.requireIMDS && !s.IMDSv2Required {
+	// IMDSv2 is an AWS EC2 metadata feature; it does not apply to GCP or OCI.
+	if b.requireIMDS && !s.IMDSv2Required && gen.IsCloudAWS(s.Cloud) {
 		return ErrRequireImdsv2
 	}
 	if b.requireEBS && !s.EnableEbsEncryption {

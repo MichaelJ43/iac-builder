@@ -3,6 +3,8 @@ import { normalizeFetchError } from "./fetchUtils";
 
 const base = "";
 
+export type CloudId = "aws" | "gcp" | "oci";
+
 export type Framework =
   | "terraform"
   | "opentofu"
@@ -25,7 +27,7 @@ export const FRAMEWORK_IDS: Framework[] = [
 
 export type WizardState = {
   framework: Framework | "";
-  cloud: string;
+  cloud: CloudId | "";
   region: string;
   vpc_id: string;
   subnet_id: string;
@@ -47,7 +49,7 @@ export type WizardState = {
 export function emptyWizardState(): WizardState {
   return {
     framework: "",
-    cloud: "aws",
+    cloud: "aws" satisfies CloudId,
     region: "",
     vpc_id: "",
     subnet_id: "",

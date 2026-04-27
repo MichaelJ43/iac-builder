@@ -50,6 +50,10 @@ func TestEnforceOperatorPreview_RequireIMDSV2(t *testing.T) {
 	if err := EnforceOperatorPreview(gen.WizardState{IMDSv2Required: true}); err != nil {
 		t.Fatalf("unexpected: %v", err)
 	}
+	// IMDS is AWS-only; do not require the checkbox for other clouds.
+	if err := EnforceOperatorPreview(gen.WizardState{Cloud: "gcp", IMDSv2Required: false}); err != nil {
+		t.Fatalf("gcp: expected no IMDS error, got %v", err)
+	}
 }
 
 func TestEnforceOperatorPreview_RequireEbsEncryption(t *testing.T) {
