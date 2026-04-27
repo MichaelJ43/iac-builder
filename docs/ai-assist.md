@@ -12,6 +12,11 @@ This document describes optional **AI assist** in the iac-builder web UI. The **
 - When **platform auth** is enabled, these routes and **`POST /api/v1/ai/assist`** require a **signed-in** user; keys are **per user**. When auth is **disabled** (typical local dev), a **single** key is stored for the anonymous tenant (`user_id` empty).
 - **Billing:** the user’s key is used to call the OpenAI **Chat Completions** API; **usage is billed by OpenAI to that key**, not by the iac-builder operator.
 
+## `GET /api/v1/ai/prompt-disclosure`
+
+- **Public** (no auth, no secrets): returns the **system prompt**, **user message prefix**, **parameters** (model env, temperature, etc.), and `provider: "openai"`. The `future_providers` field is an empty list until another backend is added—same **v1 context** contract is intended to stay stable.
+- Use this in your own client or in CI to assert prompts match [prompts.go](../src/api/internal/aiassist/prompts.go). The in-app **Inspect prompting (read-only)** block loads this endpoint.
+
 ## `POST /api/v1/ai/assist`
 
 - **Body:** `{ "context": <v1 object> }` from `buildAiContextForAiAssist` (`v: 1`, `app: "iac-builder"`, `wizard` object, etc.).

@@ -308,6 +308,37 @@ func TestAIAssist_BadContext(t *testing.T) {
 	}
 }
 
+func TestAIPromptDisclosure(t *testing.T) {
+	h, cleanup, err := export.NewTestHandler("file::memory:?cache=shared", mustDecodeHex(testMasterKeyHex))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer cleanup()
+	s := httptest.NewServer(h)
+	defer s.Close()
+	res, err := http.Get(s.URL + "/api/v1/ai/prompt-disclosure")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer res.Body.Close()
+	if res.StatusCode != http.StatusOK {
+		t.Fatalf("status %d", res.StatusCode)
+	}
+	var out struct {
+		Provider string   `json:"provider"`
+		Future   []string `json:"future_providers"`
+	}
+	if err := json.NewDecoder(res.Body).Decode(&out); err != nil {
+		t.Fatal(err)
+	}
+	if out.Provider != "openai" {
+		t.Fatalf("provider %q", out.Provider)
+	}
+	if out.Future == nil {
+		t.Fatal("expected future_providers array")
+	}
+}
+
 func TestOpenAIKey_PUT_GET_DELETE(t *testing.T) {
 	h, cleanup, err := export.NewTestHandler("file::memory:?cache=shared", mustDecodeHex(testMasterKeyHex))
 	if err != nil {

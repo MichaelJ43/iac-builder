@@ -43,6 +43,9 @@ func (s *Server) Handler() http.Handler {
 	})
 	r.Get("/api/v1/auth/status", s.handleAuthStatus)
 
+	// Public: no secrets; same prompt strings the server uses for OpenAI BYOK.
+	r.Get("/api/v1/ai/prompt-disclosure", s.handleAIPromptDisclosure)
+
 	r.Post("/api/v1/preview", s.handlePreview)
 	r.Post("/api/v1/security/recommendations", s.handleSecurity)
 

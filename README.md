@@ -56,11 +56,19 @@ make test
 
 See **[`AGENTS.md`](AGENTS.md)** — merged PR titles may include `+(semver:major|minor|patch)` to bump [`VERSION`](VERSION).
 
+## Optional LLM assistance (OpenAI, BYOK)
+
+The wizard can call an **LLM** for optional text suggestions. **Today** the API integrates only with **OpenAI** (Chat Completions) using a **BYOK** (bring your own) API key: users save their key encrypted in the app database; the **hosting operator does not supply** a platform key or pay OpenAI. See [`docs/ai-assist.md`](docs/ai-assist.md) for routes, env, and policy.
+
+- **Extensible to more providers (future):** the roadmap is to keep the same **v1 context JSON** contract and add other backends; until then, `GET /api/v1/ai/prompt-disclosure` returns `provider: "openai"` and an empty `future_providers` list. Prompt strings live in [`src/api/internal/aiassist/prompts.go`](src/api/internal/aiassist/prompts.go) so you can audit them without the UI.
+- **Self-serve review:** the **Inspect prompting (read-only)** area in the AI assist panel, or a direct `GET /api/v1/ai/prompt-disclosure` call, returns the system prompt and parameters the server uses (no secrets).
+
 ## Documentation
 
 - [`docs/local-dev.md`](docs/local-dev.md)
 - [`docs/security.md`](docs/security.md)
 - [`docs/future-ideas.md`](docs/future-ideas.md)
+- [`docs/ai-assist.md`](docs/ai-assist.md) — optional AI / OpenAI BYOK
 - [`docs/aws-deploy.md`](docs/aws-deploy.md) — S3 + CloudFront + ALB + Lambda in **us-east-1**, GitHub Actions deploy/destroy
 
 ## AWS serverless hosting

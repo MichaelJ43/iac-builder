@@ -18,6 +18,22 @@ describe("AiAssistPanel", () => {
           json: () => Promise.resolve({ configured: false }),
         });
       }
+      if (u.includes("/api/v1/ai/prompt-disclosure")) {
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          json: () =>
+            Promise.resolve({
+              provider: "openai",
+              future_providers: [],
+              system_prompt: "test system",
+              user_message_prefix: "Wizard context (JSON):\n",
+              user_message_intro: "intro",
+              parameters: "p",
+              source_code_path_hint: "hint",
+            }),
+        });
+      }
       return Promise.resolve({
         ok: true,
         status: 200,

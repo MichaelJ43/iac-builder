@@ -3,8 +3,10 @@ import type { WizardState } from "./api";
 import {
   deleteOpenAIKey,
   getOpenAIKeyStatus,
+  getPromptDisclosure,
   postAiAssist,
   putOpenAIKey,
+  type PromptDisclosure,
 } from "./aiAssistApi";
 import { buildAiContextForAiAssist } from "./aiAssistPolicy";
 import type { AuthStatus } from "./credentialApi";
@@ -12,6 +14,8 @@ import { errorMessageFromUnknown } from "./fetchUtils";
 
 const POLICY_MD =
   "https://github.com/MichaelJ43/iac-builder/blob/main/docs/ai-assist.md";
+const PROMPTS_SOURCE =
+  "https://github.com/MichaelJ43/iac-builder/blob/main/src/api/internal/aiassist/prompts.go";
 
 type Props = {
   state: WizardState;
@@ -32,6 +36,10 @@ export function AiAssistPanel({ state, authStatus }: Props) {
   const [keyStatus, setKeyStatus] = useState<"unknown" | "no" | "yes">("unknown");
   const [keyLast4, setKeyLast4] = useState<string | null>(null);
   const [keyBusy, setKeyBusy] = useState(false);
+  const [disclosure, setDisclosure] = useState<PromptDisclosure | null>(null);
+  const [disclosureErr, setDisclosureErr] = useState<string | null>(null);
+  const [disclosureLoading, setDisclosureLoading] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
   const ctx = useMemo(() => buildAiContextForAiAssist(state), [state]);
   const json = useMemo(() => JSON.stringify(ctx, null, 2), [ctx]);
   const ackId = useId();
@@ -173,6 +181,70 @@ export function AiAssistPanel({ state, authStatus }: Props) {
             <li>Never paste AWS access keys; only wizard fields and your optional OpenAI key (for BYOK) go to the server.</li>
             <li>Review all model output like any generated code.</li>
           </ul>
+          <div className="ai-assist__notice" role="note">
+            <strong>Model output is unreviewed.</strong> Nothing here is a guarantee of safety or fitness for
+            production. The hosting operator does not vet LLM text. Suggestions can be wrong or outdated—always cross-check
+            with the code preview and security hints.
+          </div>
+          <details
+            className="ai-assist__inspect"
+            onToggle={(e) => {
+              const el = e.currentTarget;
+              if (!el.open || disclosure || disclosureLoading) {
+                return;
+              }
+              setDisclosureLoading(true);
+              setDisclosureErr(null);
+              void (async () => {
+                try {
+                  setDisclosure(await getPromptDisclosure());
+                } catch (err) {
+                  setDisclosureErr(errorMessageFromUnknown(err));
+                } finally {
+                  setDisclosureLoading(false);
+                }
+              })();
+            }}
+          >
+            <summary className="ai-assist__inspect-summary">Inspect prompting (read-only, self-serve)</summary>
+            <p className="help">
+              The public endpoint <code>GET /api/v1/ai/prompt-disclosure</code> returns the same system prompt, prefix,
+              and parameters the API uses for <strong>OpenAI</strong> today. Other providers are not implemented yet; the
+              response includes an empty <code>future_providers</code> list reserved for later backends.
+            </p>
+            {disclosureLoading && <p className="help">Loading…</p>}
+            {disclosureErr && <p className="message--error m43-message--error">{disclosureErr}</p>}
+            {disclosure && (
+              <div className="ai-assist__disclosure">
+                <p className="help">
+                  <strong>Provider (today):</strong> {disclosure.provider}
+                  {disclosure.future_providers.length > 0
+                    ? ` · Future slots: ${disclosure.future_providers.join(", ")}`
+                    : " · No additional providers are wired in this build—only OpenAI Chat Completions."}
+                </p>
+                <p className="help">
+                  <strong>Parameters:</strong> {disclosure.parameters}
+                </p>
+                <p className="help">
+                  {disclosure.user_message_intro} <strong>Prefix:</strong>{" "}
+                  <code className="ai-assist__inline-code">
+                    {JSON.stringify(disclosure.user_message_prefix)}
+                  </code>
+                </p>
+                <p className="ai-assist__dlabel">System message (role=system)</p>
+                <pre className="ai-assist__disclosure-pre" aria-label="System prompt text">
+                  {disclosure.system_prompt}
+                </pre>
+                <p className="help">
+                  Source:{" "}
+                  <a className="ai-assist__link" href={PROMPTS_SOURCE} rel="noreferrer" target="_blank">
+                    aiassist/prompts.go
+                  </a>{" "}
+                  ({disclosure.source_code_path_hint}).
+                </p>
+              </div>
+            )}
+          </details>
           <div className="ai-assist__context">
             <span className="ai-assist__context-label">Context preview (v{ctx.v})</span>
             <pre className="ai-assist__pre">{json}</pre>
@@ -188,6 +260,7 @@ export function AiAssistPanel({ state, authStatus }: Props) {
                   setErr(null);
                   setResultMsg(null);
                   setSuggestions(null);
+                  setSubmitted(false);
                 }}
               />{" "}
               I have read the policy and understand a suggestion request sends the JSON above to the API, and if I saved
@@ -213,12 +286,21 @@ export function AiAssistPanel({ state, authStatus }: Props) {
                   setErr(errorMessageFromUnknown(e));
                 } finally {
                   setBusy(false);
+                  setSubmitted(true);
                 }
               })();
             }}
           >
             {busy ? "Requesting…" : "Get AI suggestions"}
           </button>
+          {submitted && (
+            <p className="ai-assist__submission-blurb" role="status" aria-live="polite">
+              <strong>Submission note:</strong> A request was sent to this app’s API. If you saved an OpenAI key, the
+              server combined the system prompt and your context (see <strong>Inspect prompting</strong> above) and
+              called the OpenAI API with <em>your</em> key. Re-run <code>GET /api/v1/ai/prompt-disclosure</code> any time
+              to compare with what you expect. Treat all returned text as untrusted.
+            </p>
+          )}
           {err && <p className="message--error m43-message--error ai-assist__err">{err}</p>}
           {resultMsg && <p className="ai-assist__result">{resultMsg}</p>}
           {suggestions && <pre className="ai-assist__suggest">{suggestions}</pre>}

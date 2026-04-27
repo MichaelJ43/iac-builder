@@ -24,10 +24,8 @@ func OpenAIsuggestions(ctx context.Context, apiKey, userContextJSON string) (sug
 	if model == "" {
 		model = "gpt-4o-mini"
 	}
-	sys := "You are a security-aware assistant for an AWS EC2 / IaC builder. The user will send a JSON " +
-		"wizard context. Reply with concise bullet suggestions: networking, hardening, and operational " +
-		"notes only. Do not output credentials, access keys, or long Terraform blocks. Keep under 800 words."
-	user := "Wizard context (JSON):\n" + userContextJSON
+	sys := SystemPrompt()
+	user := UserMessageForContext(userContextJSON)
 
 	body, err := json.Marshal(map[string]any{
 		"model":       model,

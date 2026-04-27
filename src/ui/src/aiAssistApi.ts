@@ -68,3 +68,25 @@ export async function deleteOpenAIKey(): Promise<void> {
     throw new Error(await normalizeFetchError(res));
   }
 }
+
+/** Public GET — same system/user prompt metadata the API uses (no secrets). */
+export type PromptDisclosure = {
+  provider: string;
+  future_providers: string[];
+  system_prompt: string;
+  user_message_prefix: string;
+  user_message_intro: string;
+  parameters: string;
+  source_code_path_hint: string;
+};
+
+export async function getPromptDisclosure(): Promise<PromptDisclosure> {
+  const res = await fetch(`${base}/api/v1/ai/prompt-disclosure`, {
+    method: "GET",
+    cache: "no-store",
+  });
+  if (!res.ok) {
+    throw new Error(await normalizeFetchError(res));
+  }
+  return (await res.json()) as PromptDisclosure;
+}
