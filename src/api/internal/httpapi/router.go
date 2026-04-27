@@ -45,7 +45,21 @@ func (s *Server) Handler() http.Handler {
 
 	r.Post("/api/v1/preview", s.handlePreview)
 	r.Post("/api/v1/security/recommendations", s.handleSecurity)
-	r.Post("/api/v1/ai/assist", s.handleAIAssist)
+
+	ai := func(r chi.Router) {
+		r.Post("/assist", s.handleAIAssist)
+		r.Get("/openai-key", s.handleGetOpenAIKey)
+		r.Put("/openai-key", s.handlePutOpenAIKey)
+		r.Delete("/openai-key", s.handleDeleteOpenAIKey)
+	}
+	if s.Auth != nil && s.Auth.Enabled() {
+		r.Route("/api/v1/ai", func(r chi.Router) {
+			r.Use(s.requirePlatformUser)
+			ai(r)
+		})
+	} else {
+		r.Route("/api/v1/ai", ai)
+	}
 
 	profile := func(r chi.Router) {
 		r.Get("/", s.handleListProfiles)

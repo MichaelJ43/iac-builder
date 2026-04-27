@@ -308,6 +308,50 @@ func TestAIAssist_BadContext(t *testing.T) {
 	}
 }
 
+func TestOpenAIKey_PUT_GET_DELETE(t *testing.T) {
+	h, cleanup, err := export.NewTestHandler("file::memory:?cache=shared", mustDecodeHex(testMasterKeyHex))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer cleanup()
+	s := httptest.NewServer(h)
+	defer s.Close()
+	putBody := `{"openai_api_key":"sk-abcdefghijklmnopqrstuv"}`
+	pr, _ := http.NewRequest(http.MethodPut, s.URL+"/api/v1/ai/openai-key", bytes.NewBufferString(putBody))
+	pr.Header.Set("Content-Type", "application/json")
+	res, err := http.DefaultClient.Do(pr)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.StatusCode != http.StatusNoContent {
+		t.Fatalf("put status %d", res.StatusCode)
+	}
+	res, err = http.Get(s.URL + "/api/v1/ai/openai-key")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.StatusCode != http.StatusOK {
+		t.Fatalf("get status %d", res.StatusCode)
+	}
+	var g struct {
+		Configured bool   `json:"configured"`
+		KeyLast4   string `json:"key_last4"`
+	}
+	_ = json.NewDecoder(res.Body).Decode(&g)
+	_ = res.Body.Close()
+	if !g.Configured || g.KeyLast4 != "stuv" {
+		t.Fatalf("get body %+v", g)
+	}
+	del, _ := http.NewRequest(http.MethodDelete, s.URL+"/api/v1/ai/openai-key", nil)
+	res, err = http.DefaultClient.Do(del)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.StatusCode != http.StatusNoContent {
+		t.Fatalf("delete status %d", res.StatusCode)
+	}
+}
+
 func TestAIAssist_RateLimit(t *testing.T) {
 	t.Setenv("IAC_AI_ASSIST_RPM", "2")
 	h, cleanup, err := export.NewTestHandler("file::memory:?cache=shared", mustDecodeHex(testMasterKeyHex))

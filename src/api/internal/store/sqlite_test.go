@@ -86,3 +86,32 @@ func TestDeleteProfileEnforceUser(t *testing.T) {
 		t.Fatalf("second delete: n=%d err=%v", n, err)
 	}
 }
+
+func TestUserOpenAIKeyRoundTrip(t *testing.T) {
+	mk, _ := crypto.ParseMasterKey("0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20")
+	s, err := OpenSQLite("file::memory:?cache=shared", mk)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = s.Close() })
+	ctx := context.Background()
+	k, err := s.GetUserOpenAIKey(ctx, "u1")
+	if err != nil || k != "" {
+		t.Fatalf("empty: k=%q err=%v", k, err)
+	}
+	if err := s.SetUserOpenAIKey(ctx, "u1", "sk-test1234567890123456"); err != nil {
+		t.Fatal(err)
+	}
+	k2, err := s.GetUserOpenAIKey(ctx, "u1")
+	if err != nil || k2 != "sk-test1234567890123456" {
+		t.Fatalf("get: %q %v", k2, err)
+	}
+	h, err := s.KeyHintLast4(ctx, "u1")
+	if err != nil || h != "3456" {
+		t.Fatalf("hint: %q %v", h, err)
+	}
+	n, err := s.DeleteUserOpenAIKey(ctx, "u1")
+	if err != nil || n != 1 {
+		t.Fatalf("delete: n=%d %v", n, err)
+	}
+}

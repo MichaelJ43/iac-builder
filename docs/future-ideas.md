@@ -4,11 +4,10 @@ This document captures **post-MVP** and **in-flight** product directions. For cu
 
 ## Priority overview (outstanding work only)
 
-The table below lists **work that is not done yet**—not a history. When a row is finished, **remove it** from the table (and shrink or drop the matching section) so the next priority stays visible. Shipped work lives in the **Shipped in-tree** / **Completed** notes below, not in the table.
+The table below lists **work that is not done yet**—not a history. When a row is finished, **remove it** from the table so the next priority stays visible. Shipped work lives in the **Completed** notes below, not in the table.
 
 | Priority | Theme | What’s left |
 |----------|--------|--------|
-| **P1** | UX & Polish | **AI assist (optional):** LLM **provider** + server-side keys; product/**legal** sign-off. |
 | **P2** | Security depth | Org-wide guardrails, deeper automated CIS, **live** resource wiring to Secrets Manager / Parameter Store from the app. |
 | **P3** | Presets & catalogs | **Versioning** (or labels), **quick-builder** stack catalog, optional team/**org** libraries. |
 | **P4** | More frameworks / emitters | CloudFormation, Pulumi, Bicep, CDK, OpenTofu, Crossplane—beyond the current **Terraform**-oriented path. |
@@ -18,22 +17,16 @@ The table below lists **work that is not done yet**—not a history. When a row 
 | **P8** | Non-cloud & hybrid | Kubernetes packaging, on-prem Ansible, VMware. |
 | **P9** | Operations | Hosted posture, **opt-in** telemetry, multi-region API. |
 
-*Maintainers: when a row’s “What’s left” is empty, delete that row. When **P1** is empty, remove the P1 section below; the first row should then be **P2** if any P2 work remains.*
+*Maintainers: delete a row when its “What’s left” is empty.*
 
----
+### Completed — P1 (UX & polish)
 
-## P1 — UX and polish
+The **P1** UX track is considered **complete** for this repo: wizard polish, validation, discovery loading, and **optional AI assist** with **BYOK** (each user stores their own OpenAI API key encrypted server-side; the **hosting operator does not fund** model usage). See [`ai-assist.md`](ai-assist.md) for routes, env, and policy. **Product / legal** review is an **operator responsibility** before production use (subprocessor, terms, regional rules).
 
-**Not done (same as the table).**  
-- **AI assist (optional):** real **LLM** provider, server-side key handling, product/legal sign-off.  
-  **Shipped for this area:** `POST /api/v1/ai/assist` with v1 context validation, per-IP rate limit (`IAC_AI_ASSIST_RPM`), stub response; UI “Get AI suggestions” is user-triggered after policy checkbox.
-
-**Shipped in-tree (reference—do not copy back into the priority table).**  
-- **Wizard read order** and **header** copy: framework → region → **optional** profile → network & compute, with **starters** and **server presets** (collapsible) after the main path.  
-- **Toolbar hint** (Import vs **Create from JSON** for server presets), **import/export** / undo / comboboxes.  
-- **AWS discovery loading:** `useAwsDiscovery` exposes `loading` / `loadingSubnets` with a short **help** line and `aria-busy` / subtle styling on comboboxes while read-only lists refresh.  
-- **Client-side validation** before preview: required fields aligned with the API’s `Validate()`, inline `aria-invalid` / error text, optional format checks (SSH CIDR, security group ids, subnet/AMI prefixes when clearly wrong). Skips `/api/v1/preview` and security fetch when invalid.  
-- Build-flagged **AI assist** area (`VITE_IAC_AI_ASSIST`); policy + JSON preview + user-triggered API call (see above). No third-party model in default deployments. See [`ai-assist.md`](ai-assist.md).
+- **Wizard read order**, header, toolbar, import/export, undo, comboboxes, starters, presets (as shipped).  
+- **AWS discovery loading** (`loading` / `loadingSubnets`, `aria-busy`).  
+- **Client-side validation** before preview (aligned with API `Validate()` + format hints).  
+- **AI assist (build-flagged):** `GET/PUT/DELETE /api/v1/ai/openai-key`, `POST /api/v1/ai/assist`, per-IP rate limit, OpenAI BYOK via `IAC_OPENAI_MODEL` / `IAC_OPENAI_BASE_URL` (optional).
 
 ---
 

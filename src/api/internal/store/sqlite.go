@@ -41,7 +41,10 @@ CREATE TABLE IF NOT EXISTS wizard_presets (
 `); err != nil {
 		return err
 	}
-	return s.migrateCredentialProfiles()
+	if err := s.migrateCredentialProfiles(); err != nil {
+		return err
+	}
+	return s.migrateUserOpenAIKey()
 }
 
 func (s *Store) migrateCredentialProfiles() error {
