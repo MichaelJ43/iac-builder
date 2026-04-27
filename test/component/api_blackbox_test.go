@@ -138,6 +138,127 @@ func TestPreview_Terraform(t *testing.T) {
 	}
 }
 
+func TestPreview_OpenTofu(t *testing.T) {
+	h, cleanup, err := export.NewTestHandler("file::memory:?cache=shared", mustDecodeHex(testMasterKeyHex))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer cleanup()
+	s := httptest.NewServer(h)
+	defer s.Close()
+
+	body := map[string]any{
+		"state": map[string]any{
+			"framework":          "opentofu",
+			"cloud":              "aws",
+			"region":             "us-east-1",
+			"vpc_id":             "vpc-1",
+			"subnet_id":          "subnet-1",
+			"instance_type":      "t3.micro",
+			"ami":                "ami-12345",
+			"security_group_ids": []string{"sg-1"},
+		},
+	}
+	b, _ := json.Marshal(body)
+	res, err := http.Post(s.URL+"/api/v1/preview", "application/json", bytes.NewReader(b))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.StatusCode != http.StatusOK {
+		t.Fatalf("status %d", res.StatusCode)
+	}
+	var out struct {
+		Files map[string]string `json:"files"`
+	}
+	if err := json.NewDecoder(res.Body).Decode(&out); err != nil {
+		t.Fatal(err)
+	}
+	tf := out.Files["main.tf"]
+	if tf == "" || !strings.HasPrefix(tf, "# OpenTofu:") {
+		t.Fatal("expected OpenTofu header on main.tf")
+	}
+}
+
+func TestPreview_Crossplane(t *testing.T) {
+	h, cleanup, err := export.NewTestHandler("file::memory:?cache=shared", mustDecodeHex(testMasterKeyHex))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer cleanup()
+	s := httptest.NewServer(h)
+	defer s.Close()
+
+	body := map[string]any{
+		"state": map[string]any{
+			"framework":          "crossplane",
+			"cloud":              "aws",
+			"region":             "us-east-1",
+			"vpc_id":             "vpc-1",
+			"subnet_id":          "subnet-1",
+			"instance_type":      "t3.micro",
+			"ami":                "ami-12345",
+			"security_group_ids": []string{"sg-1"},
+		},
+	}
+	b, _ := json.Marshal(body)
+	res, err := http.Post(s.URL+"/api/v1/preview", "application/json", bytes.NewReader(b))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.StatusCode != http.StatusOK {
+		t.Fatalf("status %d", res.StatusCode)
+	}
+	var out struct {
+		Files map[string]string `json:"files"`
+	}
+	if err := json.NewDecoder(res.Body).Decode(&out); err != nil {
+		t.Fatal(err)
+	}
+	if out.Files["ec2-instance.yaml"] == "" {
+		t.Fatal("expected ec2-instance.yaml")
+	}
+}
+
+func TestPreview_Pulumi(t *testing.T) {
+	h, cleanup, err := export.NewTestHandler("file::memory:?cache=shared", mustDecodeHex(testMasterKeyHex))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer cleanup()
+	s := httptest.NewServer(h)
+	defer s.Close()
+
+	body := map[string]any{
+		"state": map[string]any{
+			"framework":          "pulumi",
+			"cloud":              "aws",
+			"region":             "us-east-1",
+			"vpc_id":             "vpc-1",
+			"subnet_id":          "subnet-1",
+			"instance_type":      "t3.micro",
+			"ami":                "ami-12345",
+			"security_group_ids": []string{"sg-1"},
+		},
+	}
+	b, _ := json.Marshal(body)
+	res, err := http.Post(s.URL+"/api/v1/preview", "application/json", bytes.NewReader(b))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.StatusCode != http.StatusOK {
+		t.Fatalf("status %d", res.StatusCode)
+	}
+	var out struct {
+		Files map[string]string `json:"files"`
+	}
+	if err := json.NewDecoder(res.Body).Decode(&out); err != nil {
+		t.Fatal(err)
+	}
+	if out.Files["index.ts"] == "" {
+		t.Fatal("expected index.ts")
+	}
+}
+
 func TestPreview_Blocked_SSH_OperatorGuard(t *testing.T) {
 	t.Setenv("IAC_BLOCK_SSH_OPEN_WORLD", "1")
 	h, cleanup, err := export.NewTestHandler("file::memory:?cache=shared", mustDecodeHex(testMasterKeyHex))

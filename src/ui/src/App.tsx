@@ -50,10 +50,12 @@ import { validateWizardForPreview } from "./wizardValidation";
 
 const frameworks: { id: Framework; label: string }[] = [
   { id: "terraform", label: "Terraform (HCL)" },
+  { id: "opentofu", label: "OpenTofu (HCL)" },
   { id: "cloudformation", label: "AWS CloudFormation" },
   { id: "pulumi", label: "Pulumi" },
   { id: "azure_bicep", label: "Azure Bicep" },
   { id: "aws_cdk", label: "AWS CDK" },
+  { id: "crossplane", label: "Crossplane" },
 ];
 
 export function App() {

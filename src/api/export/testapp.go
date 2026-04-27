@@ -19,10 +19,12 @@ func NewTestHandler(sqliteDSN string, masterKey []byte) (http.Handler, func(), e
 	cleanup := func() { _ = st.Close() }
 	reg := gen.NewRegistry(
 		gen.TerraformEmitter{},
+		gen.OpenTofuEmitter{},
 		gen.CloudFormationEmitter{},
-		gen.NewPulumiStub(),
-		gen.NewBicepStub(),
-		gen.NewCDKStub(),
+		gen.PulumiAWSEmitter{},
+		gen.CDKAWSEmitter{},
+		gen.CrossplaneEC2Emitter{},
+		gen.BicepAWSEmitter{},
 	)
 	_ = os.Setenv("CORS_ORIGIN", "*")
 	s := &httpapi.Server{Reg: reg, Store: st, Version: "test", Auth: nil}
