@@ -16,7 +16,19 @@ import {
   securityRecommendations,
 } from "./api";
 import { INSTANCE_TYPE_SUGGESTIONS } from "./awsConstants";
-import { CLOUD_OPTIONS, isAwsCloud, networkFieldLabels, regionSuggestionsForCloud } from "./cloudConstants";
+import {
+  CLOUD_OPTIONS,
+  imageFieldPlaceholder,
+  instanceTypeFieldHelp,
+  instanceTypeFieldPlaceholder,
+  isAwsCloud,
+  networkFieldLabels,
+  regionFieldHelp,
+  regionPlaceholderForCloud,
+  regionSuggestionsForCloud,
+  subnetFieldPlaceholder,
+  vpcFieldPlaceholder,
+} from "./cloudConstants";
 import { ComboboxField } from "./ComboboxField";
 import { fetchAuthStatus, listCredentialProfiles, type AuthStatus, type ProfileSummary } from "./credentialApi";
 import { errorMessageFromUnknown } from "./fetchUtils";
@@ -656,9 +668,10 @@ export function App() {
 
 
         <p className="help">
-          This flow targets a single VM in one region (<code>aws_instance</code> on AWS, or Terraform starters for
-          Google Cloud / OCI). <strong>Subnet / subnetwork</strong> is required. On AWS, <strong>VPC</strong> is
-          optional; setting it unlocks read-only lists when a credential profile is selected.
+          This flow targets a single compute unit in one place: <code>aws_instance</code> on AWS, Terraform starters
+          for Google Cloud and OCI, and Kubernetes (YAML), Ansible, or vSphere (Terraform) for non-cloud or hybrid.{" "}
+          <strong>Subnet (or subnetwork, host, or port group, depending on target)</strong> is required. On AWS,{" "}
+          <strong>VPC</strong> is optional; setting it unlocks read-only lists when a credential profile is selected.
         </p>
         {err && <p className={errorClass}>{err}</p>}
 
@@ -720,8 +733,8 @@ export function App() {
             value={state.region}
             onChange={(v) => setState((s) => ({ ...s, region: v }))}
             suggestions={regionOpts}
-            placeholder={isAwsCloud(state.cloud) ? "us-east-1" : state.cloud === "gcp" ? "us-central1" : "us-ashburn-1"}
-            help={<>Type any valid region; the list is a shortcut for the selected cloud.</>}
+            placeholder={regionPlaceholderForCloud(state.cloud || "aws")}
+            help={<>{regionFieldHelp(state.cloud || "aws")}</>}
             error={fieldErr.region}
             aria-label="Cloud region"
           />
@@ -796,9 +809,7 @@ export function App() {
               value={state.vpc_id}
               onChange={(v) => setState((s) => ({ ...s, vpc_id: v }))}
               suggestions={vpcOpts}
-              placeholder={
-                isAwsCloud(state.cloud) ? "vpc-... (optional)" : state.cloud === "gcp" ? "projects/.../..." : "ocid1..."
-              }
+              placeholder={vpcFieldPlaceholder(state.cloud || "aws")}
               busy={discoveryListLoading}
               help={
                 isAwsCloud(state.cloud) && selectedProfileId ? (
@@ -819,7 +830,7 @@ export function App() {
               value={state.subnet_id}
               onChange={(v) => setState((s) => ({ ...s, subnet_id: v }))}
               suggestions={subnetOpts}
-              placeholder={isAwsCloud(state.cloud) ? "subnet-..." : "subnetwork or OCID…"}
+              placeholder={subnetFieldPlaceholder(state.cloud || "aws")}
               busy={discoverySubnetSgLoading}
               help={
                 isAwsCloud(state.cloud) ? (
@@ -844,8 +855,8 @@ export function App() {
               value={state.instance_type}
               onChange={(v) => setState((s) => ({ ...s, instance_type: v }))}
               suggestions={instOpts}
-              placeholder="t3.micro"
-              help="Pick a common size or type your own (must exist in the region / account limits)."
+              placeholder={instanceTypeFieldPlaceholder(state.cloud || "aws")}
+              help={instanceTypeFieldHelp(state.cloud || "aws")}
               error={fieldErr.instance_type}
               aria-label="Instance type"
             />
@@ -854,12 +865,12 @@ export function App() {
               value={state.ami}
               onChange={(v) => setState((s) => ({ ...s, ami: v }))}
               suggestions={amiOpts}
-              placeholder={isAwsCloud(state.cloud) ? "ami-..." : state.cloud === "gcp" ? "debian-12" : "ocid1.image…"}
+              placeholder={imageFieldPlaceholder(state.cloud || "aws")}
               busy={discoveryListLoading}
               help={
                 isAwsCloud(state.cloud)
                   ? "Latest Amazon Linux suggestions load with a profile; or use any machine image id."
-                  : "Set a boot image, image OCID, or project image path; see your cloud’s docs."
+                  : "Set a container image, template name, or cloud image/OCID path; see your target’s documentation."
               }
               error={fieldErr.ami}
               aria-label={networkLabels.image}
@@ -882,7 +893,7 @@ export function App() {
               <p className="help">
                 {isAwsCloud(state.cloud)
                   ? "Suggestions are per-VPC when a profile and VPC are set. Separate multiple AWS sg- ids with commas."
-                  : "On GCP/OCI, paste firewall or NSG resource ids if applicable; the Terraform starters may expect AWS-style security groups only when targeting AWS."}
+                  : "On non-AWS targets, paste firewall, NSG, or NetworkPolicy references if applicable; the Terraform starters may only wire AWS when targeting EC2."}
               </p>
               <input
                 id="wizard-sg-ids"

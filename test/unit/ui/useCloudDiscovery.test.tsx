@@ -91,6 +91,22 @@ describe("useCloudDiscovery", () => {
     );
   });
 
+  it("sets a discovery note for non-AWS targets (e.g. Kubernetes) without calling AWS APIs", async () => {
+    const { result, rerender } = renderHook(
+      ({ cloud, pid, reg, vpc }: { cloud: string; pid: string; reg: string; vpc: string }) =>
+        useCloudDiscovery(cloud as "aws" | "k8s", pid, reg, vpc),
+      { initialProps: { cloud: "k8s", pid: "p1", reg: "us-east-1", vpc: "" } }
+    );
+    rerender({ cloud: "k8s", pid: "p1", reg: "us-east-1", vpc: "" });
+    await waitFor(
+      () => {
+        expect(result.current.discoveryNote).toMatch(/not wired/);
+        expect(cred.listNetworksForProfile).not.toHaveBeenCalled();
+      },
+      { timeout: 3000 }
+    );
+  });
+
   it("sets error when networks call fails (AWS)", async () => {
     vi.spyOn(cred, "listNetworksForProfile").mockRejectedValue(new Error("network"));
     vi.spyOn(cred, "listKeyPairsForProfile").mockRejectedValue(new Error("network"));

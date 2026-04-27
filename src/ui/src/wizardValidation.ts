@@ -17,9 +17,9 @@ export function validateWizardForPreview(state: WizardState): {
   if (!framework || !FRAMEWORK_IDS.includes(framework as Framework)) {
     fields.framework = "Select an IaC framework.";
   }
-  const allowedClouds: CloudId[] = ["aws", "gcp", "oci"];
+  const allowedClouds: CloudId[] = ["aws", "gcp", "oci", "k8s", "ansible", "vmware"];
   if (!state.cloud || !allowedClouds.includes(state.cloud as CloudId)) {
-    fields.cloud = "Select a cloud (AWS, Google Cloud, or OCI).";
+    fields.cloud = "Select a cloud or non-cloud target (AWS, GCP, OCI, Kubernetes, Ansible, or VMware).";
   }
   const isAws = (state.cloud as string) === "aws" || !state.cloud;
 

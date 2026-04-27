@@ -86,4 +86,15 @@ describe("validateWizardForPreview", () => {
     expect(ok).toBe(true);
     expect(Object.keys(fields).length).toBe(0);
   });
+
+  it("accepts a minimal valid Kubernetes state", () => {
+    const s = validAwsBase();
+    s.cloud = "k8s";
+    s.subnet_id = "services";
+    s.ami = "nginx:1.25";
+    s.security_group_ids = [];
+    const { ok, fields } = validateWizardForPreview(s);
+    expect(ok).toBe(true);
+    expect(Object.keys(fields).length).toBe(0);
+  });
 });

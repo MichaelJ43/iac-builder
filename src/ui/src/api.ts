@@ -3,7 +3,7 @@ import { normalizeFetchError } from "./fetchUtils";
 
 const base = "";
 
-export type CloudId = "aws" | "gcp" | "oci";
+export type CloudId = "aws" | "gcp" | "oci" | "k8s" | "ansible" | "vmware";
 
 export type Framework =
   | "terraform"

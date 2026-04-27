@@ -4,16 +4,19 @@ import "strings"
 
 // Cloud identifiers (wizard "cloud" JSON field).
 const (
-	CloudAWS = "aws"
-	CloudGCP = "gcp"
-	CloudOCI = "oci"
+	CloudAWS     = "aws"
+	CloudGCP     = "gcp"
+	CloudOCI     = "oci"
+	CloudK8s     = "k8s"
+	CloudAnsible = "ansible"
+	CloudVMware  = "vmware"
 )
 
 // ParseCloud returns the canonical lower-case id or false.
 func ParseCloud(s string) (string, bool) {
 	c := strings.ToLower(strings.TrimSpace(s))
 	switch c {
-	case CloudAWS, CloudGCP, CloudOCI:
+	case CloudAWS, CloudGCP, CloudOCI, CloudK8s, CloudAnsible, CloudVMware:
 		return c, true
 	default:
 		return "", false
@@ -38,4 +41,19 @@ func isCloudGCP(cloud string) bool {
 func isCloudOCI(cloud string) bool {
 	c, ok := ParseCloud(cloud)
 	return ok && c == CloudOCI
+}
+
+func isCloudK8s(cloud string) bool {
+	c, ok := ParseCloud(cloud)
+	return ok && c == CloudK8s
+}
+
+func isCloudAnsible(cloud string) bool {
+	c, ok := ParseCloud(cloud)
+	return ok && c == CloudAnsible
+}
+
+func isCloudVMware(cloud string) bool {
+	c, ok := ParseCloud(cloud)
+	return ok && c == CloudVMware
 }

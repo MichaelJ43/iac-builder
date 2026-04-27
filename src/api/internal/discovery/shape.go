@@ -4,9 +4,12 @@ package discovery
 
 // Cloud identifiers match wizard and profile cloud fields.
 const (
-	CloudAWS = "aws"
-	CloudGCP = "gcp"
-	CloudOCI = "oci"
+	CloudAWS     = "aws"
+	CloudGCP     = "gcp"
+	CloudOCI     = "oci"
+	CloudK8s     = "k8s"
+	CloudAnsible = "ansible"
+	CloudVMware  = "vmware"
 )
 
 // Network is a virtual network in any supported cloud (VPC, VPC network, VCN, …).

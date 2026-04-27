@@ -32,7 +32,7 @@ export type Discovery = {
 /**
  * Fetches read-only network/compute suggestions when a credential profile and region are set.
  * **AWS** uses the stored profile (encrypted access keys) for EC2/SSM discovery.
- * **GCP / OCI** return empty lists with an explanatory note; enter resource IDs manually.
+ * **GCP, OCI, Kubernetes, Ansible, and VMware** return empty lists with a note; enter values manually.
  */
 export function useCloudDiscovery(
   cloud: CloudId | "",
@@ -61,8 +61,8 @@ export function useCloudDiscovery(
       setKeyPairs([]);
       setAmis([]);
       setNote(
-        c === "gcp" || c === "oci"
-          ? "Live list APIs are not wired for this cloud; credential profiles are AWS-only. Enter network and subnet values manually, or use AWS for read-only suggestions."
+        c === "gcp" || c === "oci" || c === "k8s" || c === "ansible" || c === "vmware"
+          ? "Live list APIs are not wired for this target; credential profiles are AWS-only. Enter values manually, or use AWS for read-only suggestions."
           : null
       );
       setLoading(false);

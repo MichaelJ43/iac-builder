@@ -5,7 +5,7 @@ import "strings"
 // WizardState is the canonical wizard payload for preview/download.
 type WizardState struct {
 	Framework Framework `json:"framework"`
-	Cloud     string    `json:"cloud"` // "aws" | "gcp" | "oci"
+	Cloud     string    `json:"cloud"` // "aws" | "gcp" | "oci" | "k8s" | "ansible" | "vmware"
 
 	Region string `json:"region"`
 

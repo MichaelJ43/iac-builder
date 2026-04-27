@@ -42,17 +42,17 @@ func (s *Server) handleDiscoveryNetworks(w http.ResponseWriter, r *http.Request)
 			Status:   discovery.StatusOK,
 		})
 		return
-	case discovery.CloudGCP, discovery.CloudOCI:
+	case discovery.CloudGCP, discovery.CloudOCI, discovery.CloudK8s, discovery.CloudAnsible, discovery.CloudVMware:
 		writeJSON(w, http.StatusOK, discovery.NetworksResponse{
 			Cloud:   cloud,
 			Region:  region,
 			Networks: nil,
 			Status:  discovery.StatusUnavailable,
-			Message: "Live discovery is not wired for this cloud; credential profiles are AWS-only. Enter VPC/VPC network/VCN and subnet values manually, or add provider-specific API integration later.",
+			Message: "Live discovery is not wired for this target; credential profiles are AWS-only. Enter values manually, or add provider-specific API integration later.",
 		})
 		return
 	default:
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "unknown cloud; use aws, gcp, or oci"})
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "unknown cloud; use aws, gcp, oci, k8s, ansible, or vmware"})
 	}
 }
 
@@ -95,18 +95,18 @@ func (s *Server) handleDiscoverySubnets(w http.ResponseWriter, r *http.Request) 
 		})
 		return
 	}
-	if cloud == discovery.CloudGCP || cloud == discovery.CloudOCI {
+	if cloud == discovery.CloudGCP || cloud == discovery.CloudOCI || cloud == discovery.CloudK8s || cloud == discovery.CloudAnsible || cloud == discovery.CloudVMware {
 		writeJSON(w, http.StatusOK, discovery.SubnetsResponse{
 			Cloud:     cloud,
 			Region:    region,
 			NetworkID: networkID,
 			Subnets:   nil,
 			Status:    discovery.StatusUnavailable,
-			Message:   "Subnets for this cloud are not listed via the API yet; paste subnet/OCID values manually.",
+			Message:   "Subnets for this target are not listed via the API yet; paste subnet or network values manually.",
 		})
 		return
 	}
-	writeJSON(w, http.StatusBadRequest, map[string]string{"error": "unknown cloud; use aws, gcp, or oci"})
+	writeJSON(w, http.StatusBadRequest, map[string]string{"error": "unknown cloud; use aws, gcp, oci, k8s, ansible, or vmware"})
 }
 
 func (s *Server) handleDiscoverySecurityGroups(w http.ResponseWriter, r *http.Request) {
@@ -131,7 +131,7 @@ func (s *Server) handleDiscoverySecurityGroups(w http.ResponseWriter, r *http.Re
 			NetworkID: networkID,
 			Groups:    nil,
 			Status:    discovery.StatusUnavailable,
-			Message:   "Security groups in this app map to AWS EC2; for GCP/OCI, configure firewall/NSG rules in your provider and enter identifiers manually as needed.",
+			Message:   "Security groups in this app map to AWS EC2; for other targets, configure firewalls, NSGs, or NetworkPolicies in your environment and enter identifiers manually as needed.",
 		})
 		return
 	}
@@ -191,15 +191,15 @@ func (s *Server) handleDiscoveryComputeImages(w http.ResponseWriter, r *http.Req
 		})
 		return
 	}
-	if cloud == discovery.CloudGCP || cloud == discovery.CloudOCI {
+	if cloud == discovery.CloudGCP || cloud == discovery.CloudOCI || cloud == discovery.CloudK8s || cloud == discovery.CloudAnsible || cloud == discovery.CloudVMware {
 		writeJSON(w, http.StatusOK, discovery.ComputeImagesResponse{
 			Cloud:  cloud,
 			Region: region,
 			Images: nil,
 			Status: discovery.StatusUnavailable,
-			Message: "Image suggestions are not implemented for this cloud; set the image/OCID field from your project or catalog.",
+			Message: "Image suggestions are not implemented for this target; set the image or template field from your project or catalog.",
 		})
 		return
 	}
-	writeJSON(w, http.StatusBadRequest, map[string]string{"error": "unknown cloud; use aws, gcp, or oci"})
+	writeJSON(w, http.StatusBadRequest, map[string]string{"error": "unknown cloud; use aws, gcp, oci, k8s, ansible, or vmware"})
 }

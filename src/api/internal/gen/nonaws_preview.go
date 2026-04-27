@@ -8,7 +8,7 @@ import (
 
 // ErrFrameworkNeedsAWS is returned when a framework is not implemented for the selected cloud.
 var ErrFrameworkNeedsAWS = errors.New(
-	"this IaC target is only implemented for AWS; choose Terraform or OpenTofu for Google Cloud and Oracle Cloud",
+	"this IaC target is not available for the selected provider; for non-AWS targets use Terraform or OpenTofu (e.g. Google Cloud, OCI, Kubernetes, Ansible, VMware)",
 )
 
 func previewNonAWS(s WizardState) (map[string]string, error) {
@@ -20,13 +20,31 @@ func previewNonAWS(s WizardState) (map[string]string, error) {
 		if isCloudOCI(s.Cloud) {
 			return ociTerraformFiles(s)
 		}
+		if isCloudK8s(s.Cloud) {
+			return k8sPackagingFiles(s)
+		}
+		if isCloudAnsible(s.Cloud) {
+			return ansibleFiles(s)
+		}
+		if isCloudVMware(s.Cloud) {
+			return vmwareTerraformFiles(s)
+		}
 	case FrameworkOpenTofu:
 		var files map[string]string
 		var err error
-		if isCloudGCP(s.Cloud) {
+		switch {
+		case isCloudGCP(s.Cloud):
 			files, err = gcpTerraformFiles(s)
-		} else {
+		case isCloudOCI(s.Cloud):
 			files, err = ociTerraformFiles(s)
+		case isCloudK8s(s.Cloud):
+			files, err = k8sPackagingFiles(s)
+		case isCloudAnsible(s.Cloud):
+			files, err = ansibleFiles(s)
+		case isCloudVMware(s.Cloud):
+			files, err = vmwareTerraformFiles(s)
+		default:
+			return nil, ErrFrameworkNeedsAWS
 		}
 		if err != nil {
 			return nil, err
