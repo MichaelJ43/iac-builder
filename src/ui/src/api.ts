@@ -5,18 +5,22 @@ const base = "";
 
 export type Framework =
   | "terraform"
+  | "opentofu"
   | "cloudformation"
   | "pulumi"
   | "azure_bicep"
-  | "aws_cdk";
+  | "aws_cdk"
+  | "crossplane";
 
-/** Top five IaC targets supported by the wizard (order matches UI). */
+/** IaC targets supported by the wizard (order matches UI). */
 export const FRAMEWORK_IDS: Framework[] = [
   "terraform",
+  "opentofu",
   "cloudformation",
   "pulumi",
   "azure_bicep",
   "aws_cdk",
+  "crossplane",
 ];
 
 export type WizardState = {

@@ -8,7 +8,6 @@ The table below lists **work that is not done yet**—not a history. When a row 
 
 | Priority | Theme | What’s left |
 |----------|--------|--------|
-| **P4** | More frameworks / emitters | CloudFormation, Pulumi, Bicep, CDK, OpenTofu, Crossplane—beyond the current **Terraform**-oriented path. |
 | **P5** | Auth & multi-user (SaaS) | Broader IdP, billing, abuse controls. |
 | **P6** | Cloud onboarding | SSO, assumed roles, identity from CI, workload identity. |
 | **P7** | More cloud providers | GCP, OCI, shared discovery shape. |
@@ -38,6 +37,10 @@ The **P2** security track is considered **complete** for this repo at the curren
 
 The **P3** presets/catalog track is **complete** for this repo at the current scope: **preset format_version + labels** (v1 JSON envelope, optional `IAC_DEFAULT_PRESET_LABELS` merge), a larger **tagged quick-builder (starter) catalog** with in-UI tag filtering, and **org-style libraries** via shared label conventions plus env defaults. See [`presets-and-catalog.md`](presets-and-catalog.md).
 
+### Completed — P4 (More frameworks / emitters)
+
+The **P4** track is **complete** for this repo at the current scope: the wizard can emit **OpenTofu** (HCL, Terraform-shaped), **Pulumi** (TypeScript), **AWS CDK** (v2 TypeScript, L1 EC2), **Azure Bicep** (syntactically valid placeholder that explains the app is AWS-EC2–centric), and **Crossplane** (Upbound `ec2.aws` Instance), alongside existing **Terraform** and **CloudFormation** targets.
+
 ---
 
 ## P2 — Security depth (reference)
@@ -52,9 +55,9 @@ The **P3** presets/catalog track is **complete** for this repo at the current sc
 
 ---
 
-## P4 — More IaC frameworks and emitters
+## P4 — More IaC frameworks and emitters (reference)
 
-Full emitters, OpenTofu notes, Crossplane—beyond the current **Terraform**-oriented path (see the P4 row in the table).
+**Shipped:** see **Completed — P4** above.
 
 ---
 

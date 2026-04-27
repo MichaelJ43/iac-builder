@@ -60,10 +60,12 @@ func initHandler() {
 
 		reg := gen.NewRegistry(
 			gen.TerraformEmitter{},
+			gen.OpenTofuEmitter{},
 			gen.CloudFormationEmitter{},
-			gen.NewPulumiStub(),
-			gen.NewBicepStub(),
-			gen.NewCDKStub(),
+			gen.PulumiAWSEmitter{},
+			gen.CDKAWSEmitter{},
+			gen.CrossplaneEC2Emitter{},
+			gen.BicepAWSEmitter{},
 		)
 		ver := os.Getenv("APP_VERSION")
 		if ver == "" {

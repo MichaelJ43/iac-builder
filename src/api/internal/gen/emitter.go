@@ -7,30 +7,48 @@ type Emitter interface {
 	Preview(ctx context.Context, s WizardState) (map[string]string, error)
 }
 
+// Registry maps wizard framework names to emitters.
 type Registry struct {
-	terraform      Emitter
-	cloudformation Emitter
-	pulumi         Emitter
-	bicep          Emitter
-	cdk            Emitter
+	terraform       Emitter
+	opentofu        Emitter
+	cloudformation  Emitter
+	pulumi          Emitter
+	awsCdk          Emitter
+	crossplane      Emitter
+	azureBicep      Emitter
 }
 
-func NewRegistry(tf, cfn, pulumi, bicep, cdk Emitter) *Registry {
-	return &Registry{terraform: tf, cloudformation: cfn, pulumi: pulumi, bicep: bicep, cdk: cdk}
+// NewRegistry wires all built-in emitters (order matches constructor params only; lookup is by framework id).
+func NewRegistry(
+	terraform, opentofu, cloudformation, pulumi, awsCdk, crossplane, azureBicep Emitter,
+) *Registry {
+	return &Registry{
+		terraform:      terraform,
+		opentofu:       opentofu,
+		cloudformation: cloudformation,
+		pulumi:         pulumi,
+		awsCdk:         awsCdk,
+		crossplane:     crossplane,
+		azureBicep:     azureBicep,
+	}
 }
 
 func (r *Registry) For(f Framework) (Emitter, bool) {
 	switch f {
 	case FrameworkTerraform:
 		return r.terraform, true
+	case FrameworkOpenTofu:
+		return r.opentofu, true
 	case FrameworkCloudFormation:
 		return r.cloudformation, true
 	case FrameworkPulumi:
 		return r.pulumi, true
-	case FrameworkAzureBicep:
-		return r.bicep, true
 	case FrameworkAWSCDK:
-		return r.cdk, true
+		return r.awsCdk, true
+	case FrameworkCrossplane:
+		return r.crossplane, true
+	case FrameworkAzureBicep:
+		return r.azureBicep, true
 	default:
 		return nil, false
 	}
