@@ -60,7 +60,7 @@ func previewNonAWS(s WizardState) (map[string]string, error) {
 }
 
 func gcpTerraformFiles(s WizardState) (map[string]string, error) {
-	region := strings.TrimSpace(s.Region)
+	region := strings.TrimSpace(FirstTargetRegion(s))
 	sub := strings.TrimSpace(s.SubnetID)
 	it := strings.TrimSpace(s.InstanceType)
 	img := strings.TrimSpace(s.AMI)
@@ -115,7 +115,7 @@ provider "google" {
 }
 
 func ociTerraformFiles(s WizardState) (map[string]string, error) {
-	region := strings.TrimSpace(s.Region)
+	region := strings.TrimSpace(FirstTargetRegion(s))
 	sub := strings.TrimSpace(s.SubnetID)
 	it := strings.TrimSpace(s.InstanceType)
 	img := strings.TrimSpace(s.AMI)

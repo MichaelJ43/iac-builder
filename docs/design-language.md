@@ -46,6 +46,7 @@ All tokens are defined on `:root` in `styles.css` with the prefix `--ib-` (short
 | Primary action | `button.primary` | Single primary action per view when possible. |
 | Toolbar (secondary) | `wizard-toolbar` + `toolbar-btn` | Undo/redo, compact horizontal actions. |
 | Form step | `step` | Stack label → control; optional `help` under label. |
+| Target regions (AWS) | `regions[]` + optional additional field | `regions[0]` is the **primary** (used for read-only discovery); more ids repeat in generated IaC. Same `subnet_id` / AMI are copied per region in output—users must fix per region before apply. JSON keeps legacy `region` in sync with `regions[0]`. |
 | Preset diff | `preset-diff` + `preset-diff__table` | Compare baseline vs current; keep table scannable. |
 | Security hints | `hints` + `m43-callout-hint` + `hints-item--warning` / `hints-item--info`; remediation: `m43-details--remediation` + `m43-inset` on `<pre>` | Callout and inset styling use **m43** shared tokens/classes (see [`static-assets` design.md](https://github.com/MichaelJ43/static-assets/blob/main/docs/design.md) — *Callout and inset monospace*) so light/dark matches the rest of the shell. Requires `m43-tokens.css` / `m43-primitives.css` from the same `v1/` bundle as in [`src/ui/index.html`](../src/ui/index.html). |
 | Inline error | `message--error` | For API or validation errors, not for help text. |

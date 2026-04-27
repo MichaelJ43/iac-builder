@@ -65,3 +65,31 @@ func TestTerraformEmitter_SecretDataSources(t *testing.T) {
 		t.Fatalf("expected ssm data source: %s", tf)
 	}
 }
+
+func TestTerraformEmitter_MultiRegion(t *testing.T) {
+	e := TerraformEmitter{}
+	s := WizardState{
+		Framework:        FrameworkTerraform,
+		Cloud:            "aws",
+		Regions:          []string{"us-west-2", "us-east-1"},
+		Region:           "us-west-2",
+		SubnetID:         "subnet-abc",
+		InstanceType:     "t3.micro",
+		AMI:              "ami-12345",
+		SecurityGroupIDs: []string{"sg-1"},
+	}
+	files, err := e.Preview(context.Background(), s)
+	if err != nil {
+		t.Fatal(err)
+	}
+	tf := files["main.tf"]
+	if !strings.Contains(tf, `target_regions = ["us-west-2", "us-east-1"]`) {
+		t.Fatalf("unexpected locals: %s", tf)
+	}
+	if !strings.Contains(tf, `resource "aws_instance" "this_us_west_2"`) || !strings.Contains(tf, `resource "aws_instance" "this_us_east_1"`) {
+		t.Fatalf("expected two regional aws_instance resources: %s", tf)
+	}
+	if !strings.Contains(tf, "provider = aws.us_east_1") {
+		t.Fatalf("expected aliased provider on second instance: %s", tf)
+	}
+}

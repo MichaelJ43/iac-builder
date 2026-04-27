@@ -45,6 +45,12 @@ export function coerceWizardState(raw: unknown): WizardState {
     cloud = root.cloud as CloudId;
   }
   const region = typeof root.region === "string" ? root.region : d.region;
+  let regions: string[] = Array.isArray(root.regions)
+    ? (root.regions as unknown[]).filter((x): x is string => typeof x === "string" && x.trim() !== "")
+    : d.regions;
+  if (regions.length === 0 && region.trim()) {
+    regions = [region.trim()];
+  }
   const vpc_id = typeof root.vpc_id === "string" ? root.vpc_id : d.vpc_id;
   const subnet_id = typeof root.subnet_id === "string" ? root.subnet_id : d.subnet_id;
   const instance_type = typeof root.instance_type === "string" ? root.instance_type : d.instance_type;
@@ -60,7 +66,8 @@ export function coerceWizardState(raw: unknown): WizardState {
   return {
     framework,
     cloud,
-    region,
+    regions,
+    region: regions[0] ?? region,
     vpc_id,
     subnet_id,
     instance_type,

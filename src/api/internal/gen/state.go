@@ -7,7 +7,9 @@ type WizardState struct {
 	Framework Framework `json:"framework"`
 	Cloud     string    `json:"cloud"` // "aws" | "gcp" | "oci" | "k8s" | "ansible" | "vmware"
 
-	Region string `json:"region"`
+	// Region is the legacy single-string field. Prefer Regions; if Regions is empty, Region is used.
+	Region  string   `json:"region"`
+	Regions []string `json:"regions,omitempty"`
 
 	// AWS EC2 slice
 	VPCID              string   `json:"vpc_id"`
@@ -37,7 +39,10 @@ func (s WizardState) Validate() error {
 	if _, ok := ParseCloud(cloud); !ok {
 		return ErrUnsupportedCloud
 	}
-	if s.Region == "" {
+	if err := ValidateTargetRegionCount(s); err != nil {
+		return err
+	}
+	if len(NormalizedRegions(s)) < 1 {
 		return ErrMissingRegion
 	}
 	if s.SubnetID == "" {

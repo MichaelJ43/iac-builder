@@ -6,7 +6,7 @@ import (
 )
 
 func k8sPackagingFiles(s WizardState) (map[string]string, error) {
-	ns := strings.TrimSpace(s.Region)
+	ns := strings.TrimSpace(FirstTargetRegion(s))
 	if ns == "" {
 		ns = "default"
 	}
@@ -77,7 +77,7 @@ spec:
 }
 
 func ansibleFiles(s WizardState) (map[string]string, error) {
-	invName := strings.TrimSpace(s.Region)
+	invName := strings.TrimSpace(FirstTargetRegion(s))
 	if invName == "" {
 		invName = "onprem"
 	}
@@ -132,7 +132,7 @@ func ansibleFiles(s WizardState) (map[string]string, error) {
 }
 
 func vmwareTerraformFiles(s WizardState) (map[string]string, error) {
-	dc := strings.TrimSpace(s.Region)
+	dc := strings.TrimSpace(FirstTargetRegion(s))
 	if dc == "" {
 		dc = "DC1"
 	}
