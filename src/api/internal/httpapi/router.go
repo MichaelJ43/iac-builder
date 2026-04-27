@@ -77,6 +77,11 @@ func (s *Server) Handler() http.Handler {
 			r.Get("/aws/security-groups", s.handleListSecurityGroups)
 			r.Get("/aws/key-pairs", s.handleListKeyPairs)
 			r.Get("/aws/ami-suggestions", s.handleListAMISuggestions)
+			// Cloud-neutral discovery (shared JSON shape; AWS is live, GCP/OCI return status=unavailable).
+			r.Get("/discovery/networks", s.handleDiscoveryNetworks)
+			r.Get("/discovery/subnets", s.handleDiscoverySubnets)
+			r.Get("/discovery/security-groups", s.handleDiscoverySecurityGroups)
+			r.Get("/discovery/compute-images", s.handleDiscoveryComputeImages)
 		})
 	}
 	if s.Auth != nil && s.Auth.Enabled() {

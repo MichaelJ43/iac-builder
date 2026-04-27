@@ -125,23 +125,25 @@ describe("credentialApi", () => {
   it("discovery helpers parse json", async () => {
     const f = vi.fn(async (input: RequestInfo | URL) => {
       const u = urlString(input);
-      if (u.includes("/vpcs")) {
+      if (u.includes("/discovery/networks")) {
         return {
           ok: true,
           status: 200,
-          json: async () => ({ vpcs: [{ id: "vpc-1", is_default: true }] }),
+          json: async () => ({
+            networks: [{ id: "vpc-1", is_default: true, cloud: "aws" }],
+          }),
           text: async () => "",
         };
       }
-      if (u.includes("/subnets")) {
+      if (u.includes("/discovery/subnets")) {
         return {
           ok: true,
           status: 200,
-          json: async () => ({ subnets: [{ id: "sub-1", az: "a" }] }),
+          json: async () => ({ subnets: [{ id: "sub-1", zone: "a" }] }),
           text: async () => "",
         };
       }
-      if (u.includes("/security-groups")) {
+      if (u.includes("/discovery/security-groups")) {
         return {
           ok: true,
           status: 200,
@@ -157,11 +159,11 @@ describe("credentialApi", () => {
           text: async () => "",
         };
       }
-      if (u.includes("/ami-suggestions")) {
+      if (u.includes("/discovery/compute-images")) {
         return {
           ok: true,
           status: 200,
-          json: async () => ({ amis: [{ id: "ami-1", name: "al2" }] }),
+          json: async () => ({ images: [{ id: "ami-1", name: "al2" }] }),
           text: async () => "",
         };
       }

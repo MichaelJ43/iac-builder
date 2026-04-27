@@ -74,6 +74,41 @@ func TestFramework_String(t *testing.T) {
 	}
 }
 
+func TestGCPTerraform_Preview(t *testing.T) {
+	s := minimalValidState(FrameworkTerraform)
+	s.Cloud = CloudGCP
+	s.Framework = FrameworkTerraform
+	files, err := previewNonAWS(s)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(files["main.tf"], `google_compute_instance`) {
+		t.Fatal("expected google_compute_instance in main.tf")
+	}
+}
+
+func TestOpenTofu_NonAWS_Preview(t *testing.T) {
+	s := minimalValidState(FrameworkOpenTofu)
+	s.Cloud = CloudOCI
+	files, err := previewNonAWS(s)
+	if err != nil {
+		t.Fatal(err)
+	}
+	tf := files["main.tf"]
+	if !strings.HasPrefix(tf, "# OpenTofu:") {
+		t.Fatal("expected OpenTofu header for non-AWS when framework is opentofu")
+	}
+}
+
+func TestNonAWS_UnsupportedFramework(t *testing.T) {
+	s := minimalValidState(FrameworkPulumi)
+	s.Cloud = CloudGCP
+	_, err := previewNonAWS(s)
+	if err == nil {
+		t.Fatal("expected error for Pulumi+GCP")
+	}
+}
+
 func minimalValidState(fw Framework) WizardState {
 	return WizardState{
 		Framework:        fw,

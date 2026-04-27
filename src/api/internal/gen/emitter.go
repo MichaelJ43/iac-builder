@@ -58,6 +58,9 @@ func Preview(ctx context.Context, reg *Registry, s WizardState) (map[string]stri
 	if err := s.Validate(); err != nil {
 		return nil, err
 	}
+	if !IsCloudAWS(s.Cloud) {
+		return previewNonAWS(s)
+	}
 	em, ok := reg.For(s.Framework)
 	if !ok {
 		return nil, ErrInvalidFramework

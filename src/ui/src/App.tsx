@@ -7,7 +7,7 @@ import {
   useState,
   type ChangeEvent,
 } from "react";
-import type { Framework, SecurityRecommendation, WizardState } from "./api";
+import type { CloudId, Framework, SecurityRecommendation, WizardState } from "./api";
 import {
   emptyWizardState,
   fetchOperatorGuards,
@@ -15,7 +15,8 @@ import {
   preview,
   securityRecommendations,
 } from "./api";
-import { AWS_REGIONS, INSTANCE_TYPE_SUGGESTIONS } from "./awsConstants";
+import { INSTANCE_TYPE_SUGGESTIONS } from "./awsConstants";
+import { CLOUD_OPTIONS, isAwsCloud, networkFieldLabels, regionSuggestionsForCloud } from "./cloudConstants";
 import { ComboboxField } from "./ComboboxField";
 import { fetchAuthStatus, listCredentialProfiles, type AuthStatus, type ProfileSummary } from "./credentialApi";
 import { errorMessageFromUnknown } from "./fetchUtils";
@@ -28,7 +29,7 @@ import {
   parsePresetLabelsInput,
   type PresetSummary,
 } from "./presetApi";
-import { useAwsDiscovery } from "./useAwsDiscovery";
+import { useCloudDiscovery } from "./useCloudDiscovery";
 import { useWizardUndoState } from "./useWizardUndoState";
 import {
   buildWizardExport,
@@ -187,9 +188,19 @@ export function App() {
     [profiles, selectedProfileId]
   );
 
-  const discovery = useAwsDiscovery(selectedProfileId, state.region, state.vpc_id);
+  const discovery = useCloudDiscovery(
+    (state.cloud || "aws") as CloudId,
+    selectedProfileId,
+    state.region,
+    state.vpc_id
+  );
 
-  const regionOpts = useMemo(() => AWS_REGIONS.map((v) => ({ value: v })), []);
+  const networkLabels = useMemo(() => networkFieldLabels(state.cloud || "aws"), [state.cloud]);
+
+  const regionOpts = useMemo(
+    () => regionSuggestionsForCloud(state.cloud || "aws").map((v) => ({ value: v })),
+    [state.cloud]
+  );
   const vpcOpts = useMemo(
     () =>
       discovery.vpcs.map((v) => ({
@@ -543,7 +554,7 @@ export function App() {
         <header className="m43-site-header">
           <h1>iac-builder</h1>
           <p className="m43-intro">
-            Guided IaC for AWS EC2 (MVP). Use the form top-to-bottom: <strong>framework</strong> and{" "}
+            Guided IaC for a single compute VM: <strong>framework</strong>, <strong>cloud</strong>, and{" "}
             <strong>region</strong>, then an optional <strong>AWS profile</strong> for discovery, then network and
             compute. <strong>Starter</strong> templates and <strong>server presets</strong> are shortcuts — optional.
           </p>
@@ -645,10 +656,9 @@ export function App() {
 
 
         <p className="help">
-          This flow targets a single <code>aws_instance</code> (or equivalent) in one region.{" "}
-          <strong>Subnet</strong> is required so the instance has a network placement.{" "}
-          <strong>VPC</strong> is optional in generated Terraform; choosing one unlocks better subnet and security
-          group suggestions.
+          This flow targets a single VM in one region (<code>aws_instance</code> on AWS, or Terraform starters for
+          Google Cloud / OCI). <strong>Subnet / subnetwork</strong> is required. On AWS, <strong>VPC</strong> is
+          optional; setting it unlocks read-only lists when a credential profile is selected.
         </p>
         {err && <p className={errorClass}>{err}</p>}
 
@@ -686,9 +696,15 @@ export function App() {
               aria-invalid={fieldErr.cloud ? true : undefined}
               aria-describedby={fieldErr.cloud ? cloudErrId : undefined}
               value={state.cloud}
-              onChange={(e) => setState((s) => ({ ...s, cloud: e.target.value }))}
+              onChange={(e) =>
+                setState((s) => ({ ...s, cloud: e.target.value as CloudId, region: "" }))
+              }
             >
-              <option value="aws">AWS</option>
+              {CLOUD_OPTIONS.map((c) => (
+              <option key={c.value} value={c.value}>
+                {c.label}
+              </option>
+            ))}
             </select>
             {fieldErr.cloud && (
               <p id={cloudErrId} className={errorClass} role="alert">
@@ -704,17 +720,17 @@ export function App() {
             value={state.region}
             onChange={(v) => setState((s) => ({ ...s, region: v }))}
             suggestions={regionOpts}
-            placeholder="us-east-1"
-            help={<>Type any region; the list is a shortcut for common values.</>}
+            placeholder={isAwsCloud(state.cloud) ? "us-east-1" : state.cloud === "gcp" ? "us-central1" : "us-ashburn-1"}
+            help={<>Type any valid region; the list is a shortcut for the selected cloud.</>}
             error={fieldErr.region}
-            aria-label="AWS region"
+            aria-label="Cloud region"
           />
         )}
 
 
         {authStatus?.kind === "signedOut" && (
           <p className="help">
-            <strong>AWS discovery</strong> and saving credential profiles to this app require a session. Use{" "}
+            <strong>AWS read-only discovery</strong> and saving profiles require a session. Use{" "}
             <strong>Log in</strong> in the top bar, then return here. You can still type resource IDs by hand
             without logging in.
           </p>
@@ -730,6 +746,7 @@ export function App() {
             </p>
             {profileListErr && <p className={errorClass}>{profileListErr}</p>}
             {discovery.error && <p className={errorClass}>{discovery.error}</p>}
+            {discovery.discoveryNote && <p className="help">{discovery.discoveryNote}</p>}
             <div className="profile-inline">
               <p className="profile-inline__summary" aria-live="polite">
                 {activeProfile ? (
@@ -769,45 +786,53 @@ export function App() {
         )}
         {canShowNetwork && (
           <>
-            {selectedProfileId && (discovery.loading || discovery.loadingSubnets) && (
+            {isAwsCloud(state.cloud) && selectedProfileId && (discovery.loading || discovery.loadingSubnets) && (
               <p className="help" aria-live="polite">
                 Loading AWS read-only suggestions for this profile and region…
               </p>
             )}
             <ComboboxField
-              label="VPC ID (optional)"
+              label={networkLabels.vpc}
               value={state.vpc_id}
               onChange={(v) => setState((s) => ({ ...s, vpc_id: v }))}
               suggestions={vpcOpts}
-              placeholder="vpc-... (optional)"
+              placeholder={
+                isAwsCloud(state.cloud) ? "vpc-... (optional)" : state.cloud === "gcp" ? "projects/.../..." : "ocid1..."
+              }
               busy={discoveryListLoading}
               help={
-                selectedProfileId ? (
+                isAwsCloud(state.cloud) && selectedProfileId ? (
                   <>
-                    Suggested VPCs in <strong>{state.region || "this region"}</strong> (read-only API). Choose a VPC
-                    to filter subnets and security groups, or type any ID.
+                    Suggested networks in <strong>{state.region || "this region"}</strong> (read-only). Choose a VPC
+                    to filter subnets and security groups, or type any id.
                   </>
+                ) : isAwsCloud(state.cloud) ? (
+                  "Select a credential profile to load suggestions, or type a VPC id manually."
                 ) : (
-                  "Select a credential profile above to load suggestions, or type a VPC id manually."
+                  "No live list for this cloud; paste a full resource name or id from your project."
                 )
               }
-              aria-label="VPC ID"
+              aria-label={networkLabels.vpc}
             />
             <ComboboxField
-              label="Subnet ID"
+              label={networkLabels.subnet}
               value={state.subnet_id}
               onChange={(v) => setState((s) => ({ ...s, subnet_id: v }))}
               suggestions={subnetOpts}
-              placeholder="subnet-..."
+              placeholder={isAwsCloud(state.cloud) ? "subnet-..." : "subnetwork or OCID…"}
               busy={discoverySubnetSgLoading}
               help={
-                <>
-                  Required for EC2. With a <strong>VPC</strong> and profile, we list subnets in that VPC; you can
-                  still paste a subnet from another VPC if you need to.
-                </>
+                isAwsCloud(state.cloud) ? (
+                  <>
+                    Required for the VM. With a <strong>parent network</strong> and profile, we list AWS subnets; you
+                    can still paste any subnet id.
+                  </>
+                ) : (
+                  "Required. Enter the subnetwork or subnet resource id for your project."
+                )
               }
               error={fieldErr.subnet_id}
-              aria-label="Subnet ID"
+              aria-label={networkLabels.subnet}
             />
           </>
         )}
@@ -815,7 +840,7 @@ export function App() {
         {canShowCompute && (
           <>
             <ComboboxField
-              label="Instance type"
+              label={networkLabels.instance}
               value={state.instance_type}
               onChange={(v) => setState((s) => ({ ...s, instance_type: v }))}
               suggestions={instOpts}
@@ -825,16 +850,21 @@ export function App() {
               aria-label="Instance type"
             />
             <ComboboxField
-              label="AMI ID"
+              label={networkLabels.image}
               value={state.ami}
               onChange={(v) => setState((s) => ({ ...s, ami: v }))}
               suggestions={amiOpts}
-              placeholder="ami-..."
+              placeholder={isAwsCloud(state.cloud) ? "ami-..." : state.cloud === "gcp" ? "debian-12" : "ocid1.image…"}
               busy={discoveryListLoading}
-              help="Latest Amazon Linux suggestions load when a profile is selected; you can use any machine image id."
+              help={
+                isAwsCloud(state.cloud)
+                  ? "Latest Amazon Linux suggestions load with a profile; or use any machine image id."
+                  : "Set a boot image, image OCID, or project image path; see your cloud’s docs."
+              }
               error={fieldErr.ami}
-              aria-label="AMI id"
+              aria-label={networkLabels.image}
             />
+            {isAwsCloud(state.cloud) && (
             <ComboboxField
               label="Key name (optional)"
               value={state.key_name}
@@ -844,9 +874,16 @@ export function App() {
               help="EC2 key pairs in this region, or a custom name."
               aria-label="Key pair name"
             />
+            )}
             <div className={fieldClass}>
-              <label htmlFor="wizard-sg-ids">Security group IDs (comma-separated)</label>
-              <p className="help">Suggestions are per-VPC when a profile and VPC are set. Separate multiple IDs with commas.</p>
+              <label htmlFor="wizard-sg-ids">
+                {isAwsCloud(state.cloud) ? "Security group IDs (comma-separated)" : "Network security ids (optional)"}
+              </label>
+              <p className="help">
+                {isAwsCloud(state.cloud)
+                  ? "Suggestions are per-VPC when a profile and VPC are set. Separate multiple AWS sg- ids with commas."
+                  : "On GCP/OCI, paste firewall or NSG resource ids if applicable; the Terraform starters may expect AWS-style security groups only when targeting AWS."}
+              </p>
               <input
                 id="wizard-sg-ids"
                 className={discoverySubnetSgLoading ? `${inputClass} m43-input--busy` : inputClass}
@@ -887,16 +924,18 @@ export function App() {
                 Associate public IP
               </label>
             </div>
-            <div className={fieldClass}>
-              <label>
-                <input
-                  type="checkbox"
-                  checked={state.imdsv2_required}
-                  onChange={(e) => setState((s) => ({ ...s, imdsv2_required: e.target.checked }))}
-                />{" "}
-                Require IMDSv2
-              </label>
-            </div>
+            {isAwsCloud(state.cloud) && (
+              <div className={fieldClass}>
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={state.imdsv2_required}
+                    onChange={(e) => setState((s) => ({ ...s, imdsv2_required: e.target.checked }))}
+                  />{" "}
+                  Require IMDSv2
+                </label>
+              </div>
+            )}
             <ComboboxField
               label="SSH CIDR (for guidance)"
               value={state.ssh_cidr}
@@ -919,9 +958,10 @@ export function App() {
                   checked={state.enable_ebs_encryption}
                   onChange={(e) => setState((s) => ({ ...s, enable_ebs_encryption: e.target.checked }))}
                 />{" "}
-                Encrypt root EBS
+                {isAwsCloud(state.cloud) ? "Encrypt root EBS" : "Encrypt root / boot volume (hint for templates)"}
               </label>
             </div>
+            {isAwsCloud(state.cloud) && (
             <details className={fieldClass}>
               <summary>Application secret references (optional, Terraform / guidance)</summary>
               <p className="help">
@@ -951,6 +991,7 @@ export function App() {
                 />
               </div>
             </details>
+            )}
           </>
         )}
 

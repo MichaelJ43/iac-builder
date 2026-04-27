@@ -1,4 +1,10 @@
-import { emptyWizardState, FRAMEWORK_IDS, type Framework, type WizardState } from "./api";
+import {
+  emptyWizardState,
+  FRAMEWORK_IDS,
+  type CloudId,
+  type Framework,
+  type WizardState,
+} from "./api";
 import { withCredentials } from "./fetchWithCredentials";
 import { normalizeFetchError } from "./fetchUtils";
 
@@ -33,7 +39,11 @@ export function coerceWizardState(raw: unknown): WizardState {
     framework = fw as Framework;
   }
 
-  const cloud = typeof root.cloud === "string" ? root.cloud : d.cloud;
+  const allowedCloud: readonly string[] = ["aws", "gcp", "oci"];
+  let cloud: WizardState["cloud"] = d.cloud;
+  if (typeof root.cloud === "string" && allowedCloud.includes(root.cloud)) {
+    cloud = root.cloud as CloudId;
+  }
   const region = typeof root.region === "string" ? root.region : d.region;
   const vpc_id = typeof root.vpc_id === "string" ? root.vpc_id : d.vpc_id;
   const subnet_id = typeof root.subnet_id === "string" ? root.subnet_id : d.subnet_id;

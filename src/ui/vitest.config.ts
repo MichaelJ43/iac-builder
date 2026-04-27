@@ -32,7 +32,7 @@ export default defineConfig({
         "src/fetchUtils.ts",
         "src/ComboboxField.tsx",
         "src/credentialApi.ts",
-        "src/useAwsDiscovery.ts",
+        "src/useCloudDiscovery.ts",
         "src/wizardValidation.ts",
       ],
       thresholds: {

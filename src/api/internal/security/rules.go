@@ -93,6 +93,82 @@ const starterInstanceRolePolicy = `{
 }`
 
 func Evaluate(s gen.WizardState) []Recommendation {
+	if !gen.IsCloudAWS(s.Cloud) {
+		return evaluateNonAWS(s)
+	}
+	return evaluateAWS(s)
+}
+
+// evaluateNonAWS returns cross-cloud and generic hints (no EC2- or SSM-specific recommendations).
+func evaluateNonAWS(s gen.WizardState) []Recommendation {
+	var out []Recommendation
+
+	if sshCIDROpenWorld(s.SSHCIDR) {
+		out = append(out, Recommendation{
+			ID:          "ssh-open-world",
+			Severity:    "warning",
+			Message:     "Avoid SSH from 0.0.0.0/0 or ::/0; prefer a narrow CIDR, bastion, or your cloud’s equivalent of session manager / serial console access.",
+			Remediation: "Restrict ingress to operator IPs and use least privilege on firewall rules and security groups.",
+			Tags:        []string{"network"},
+		})
+	} else if sshCIDRBroad(s.SSHCIDR) {
+		out = append(out, Recommendation{
+			ID:          "ssh-broad-cidr",
+			Severity:    "warning",
+			Message:     "SSH source CIDR is broad; use the smallest CIDR that still works for your team.",
+			Remediation: "Tighten ssh_cidr (often a /32 per operator).",
+			Tags:        []string{"network"},
+		})
+	}
+
+	if s.AssociatePublicIP && strings.TrimSpace(s.SSHCIDR) == "" {
+		out = append(out, Recommendation{
+			ID:          "ssh-cidr-unset-public",
+			Severity:    "warning",
+			Message:     "A public address is selected but ssh_cidr is empty; document and verify firewall or NSG rules do not expose admin ports to the world.",
+			Tags:        []string{"network"},
+		})
+	}
+
+	if !s.EnableEbsEncryption {
+		out = append(out, Recommendation{
+			ID:          "disk-encrypt",
+			Severity:    "info",
+			Message:     "Use encrypted root/boot disks for compliance and at-rest protection (provider-specific: encrypted PD / block volume, etc.).",
+			Remediation: "Enable “Encrypt root EBS” in the wizard where it maps to the provider, or set encryption in the generated resource.",
+			Tags:        []string{"storage", "compliance"},
+		})
+	}
+
+	if strings.TrimSpace(s.SubnetID) != "" && strings.TrimSpace(s.VPCID) == "" {
+		out = append(out, Recommendation{
+			ID:          "network-parent-missing",
+			Severity:    "warning",
+			Message:     "A subnet is set but the parent network (VPC/VCN) field is empty; set it for reviews and for providers that need both.",
+			Tags:        []string{"network", "compliance"},
+		})
+	}
+
+	if wizardLooksReadyForCompute(s) && len(s.SecurityGroupIDs) == 0 {
+		out = append(out, Recommendation{
+			ID:          "missing-firewall-attachments",
+			Severity:    "warning",
+			Message:     "No firewall / security group IDs in the wizard; attach the minimum needed for your workload and restrict ingress/egress.",
+			Tags:        []string{"network"},
+		})
+	}
+
+	out = append(out, Recommendation{
+		ID:          "least-privilege-iam",
+		Severity:    "info",
+		Message:     "Use a least-privilege workload identity, instance principal, or service account—avoid broad admin roles in production.",
+		Remediation: "Start from a read-only or minimal custom role and add only the APIs your app needs, with conditions on resources where possible.",
+		Tags:        []string{"iam"},
+	})
+	return out
+}
+
+func evaluateAWS(s gen.WizardState) []Recommendation {
 	var out []Recommendation
 
 	if sshCIDROpenWorld(s.SSHCIDR) {

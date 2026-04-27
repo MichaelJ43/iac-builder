@@ -4,7 +4,7 @@ import "errors"
 
 var (
 	ErrInvalidFramework     = errors.New("invalid or missing framework")
-	ErrUnsupportedCloud     = errors.New("unsupported cloud (use aws for this MVP)")
+	ErrUnsupportedCloud     = errors.New("unsupported cloud (use aws, gcp, or oci)")
 	ErrMissingRegion        = errors.New("region is required")
 	ErrMissingSubnet        = errors.New("subnet_id is required")
 	ErrMissingInstanceType  = errors.New("instance_type is required")
