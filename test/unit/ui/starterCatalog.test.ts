@@ -1,5 +1,10 @@
 import { describe, it, expect } from "vitest";
-import { getStarterTemplate, STARTER_TEMPLATES } from "@ui/starterCatalog";
+import {
+  distinctStarterTags,
+  getStarterTemplate,
+  STARTER_CATALOG_TAG_ALL,
+  STARTER_TEMPLATES,
+} from "@ui/starterCatalog";
 
 describe("starterCatalog", () => {
   it("lists unique non-empty templates with valid aws cloud", () => {
@@ -13,7 +18,13 @@ describe("starterCatalog", () => {
       expect(ids.has(t.id)).toBe(false);
       ids.add(t.id);
     }
-    expect(STARTER_TEMPLATES.length).toBeGreaterThanOrEqual(2);
+    expect(STARTER_TEMPLATES.length).toBeGreaterThanOrEqual(4);
+  });
+
+  it("exposes all-tag sentinel and distinct tags", () => {
+    expect(STARTER_CATALOG_TAG_ALL).toBeDefined();
+    const tags = distinctStarterTags(STARTER_TEMPLATES);
+    expect(tags).toContain("terraform");
   });
 
   it("getStarterTemplate returns undefined for unknown id", () => {

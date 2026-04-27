@@ -247,7 +247,7 @@ func (s *Store) CreatePreset(ctx context.Context, name string, data json.RawMess
 }
 
 func (s *Store) ListPresets(ctx context.Context) ([]PresetSummary, error) {
-	rows, err := s.db.QueryContext(ctx, `SELECT id,name,created_at FROM wizard_presets ORDER BY name`)
+	rows, err := s.db.QueryContext(ctx, `SELECT id,name,created_at,json_data FROM wizard_presets ORDER BY name`)
 	if err != nil {
 		return nil, err
 	}
@@ -255,8 +255,15 @@ func (s *Store) ListPresets(ctx context.Context) ([]PresetSummary, error) {
 	var out []PresetSummary
 	for rows.Next() {
 		var p PresetSummary
-		if err := rows.Scan(&p.ID, &p.Name, &p.CreatedAt); err != nil {
+		var js string
+		if err := rows.Scan(&p.ID, &p.Name, &p.CreatedAt, &js); err != nil {
 			return nil, err
+		}
+		meta, perr := ParsePresetListMeta(js)
+		if perr != nil {
+			p.FormatVersion, p.Labels = presetFormatV1, nil
+		} else {
+			p.FormatVersion, p.Labels = meta.FormatVersion, meta.Labels
 		}
 		out = append(out, p)
 	}
@@ -264,9 +271,11 @@ func (s *Store) ListPresets(ctx context.Context) ([]PresetSummary, error) {
 }
 
 type PresetSummary struct {
-	ID        string `json:"id"`
-	Name      string `json:"name"`
-	CreatedAt string `json:"created_at"`
+	ID              string   `json:"id"`
+	Name            string   `json:"name"`
+	CreatedAt       string   `json:"created_at"`
+	FormatVersion   int      `json:"format_version"`
+	Labels          []string `json:"labels,omitempty"`
 }
 
 func (s *Store) GetPreset(ctx context.Context, id string) (json.RawMessage, error) {

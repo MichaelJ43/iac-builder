@@ -8,6 +8,9 @@ export type PresetSummary = {
   id: string;
   name: string;
   created_at: string;
+  format_version?: number;
+  /** Lowercase label tags (org/team/env library); from API list. */
+  labels?: string[];
 };
 
 /** Normalize JSON from `GET /api/v1/presets/{id}` into a `WizardState`. */
@@ -71,8 +74,19 @@ export function coerceWizardState(raw: unknown): WizardState {
   };
 }
 
-export async function listPresets(): Promise<PresetSummary[]> {
-  const res = await fetch(`${base}/api/v1/presets`, withCredentials);
+export function parsePresetLabelsInput(s: string): string[] {
+  if (!s.trim()) {
+    return [];
+  }
+  return s
+    .split(/[,;]+/)
+    .map((x) => x.trim().toLowerCase())
+    .filter(Boolean);
+}
+
+export async function listPresets(labelFilter?: string): Promise<PresetSummary[]> {
+  const q = labelFilter?.trim() ? `?label=${encodeURIComponent(labelFilter.trim().toLowerCase())}` : "";
+  const res = await fetch(`${base}/api/v1/presets${q}`, withCredentials);
   if (!res.ok) {
     throw new Error(await normalizeFetchError(res));
   }
@@ -88,22 +102,34 @@ export async function getPresetWizard(id: string): Promise<WizardState> {
   return coerceWizardState(await res.json());
 }
 
-/** Persists the current wizard as an API preset (`data` is `{ state }` for `coerceWizardState`). */
-export async function createWizardPreset(name: string, state: WizardState): Promise<string> {
+/** Persists the current wizard as an API preset (stored as v1 envelope with optional labels). */
+export async function createWizardPreset(
+  name: string,
+  state: WizardState,
+  options?: { labels?: string[] }
+): Promise<string> {
+  const labels = options?.labels?.length ? options.labels : undefined;
+  const payload: Record<string, unknown> = {
+    format_version: 1,
+    state,
+  };
+  if (labels && labels.length > 0) {
+    payload.labels = labels;
+  }
   const res = await fetch(`${base}/api/v1/presets`, {
     ...withCredentials,
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ name, data: { state } }),
+    body: JSON.stringify({ name, data: payload }),
   });
   if (!res.ok) {
     throw new Error(await normalizeFetchError(res));
   }
-  const data = (await res.json()) as { id?: string };
-  if (!data.id) {
+  const out = (await res.json()) as { id?: string };
+  if (!out.id) {
     throw new Error("missing id in response");
   }
-  return data.id;
+  return out.id;
 }
 
 export async function deletePreset(id: string): Promise<void> {

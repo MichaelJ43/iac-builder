@@ -6,7 +6,17 @@ import {
   deletePreset,
   getPresetWizard,
   listPresets,
+  parsePresetLabelsInput,
 } from "@ui/presetApi";
+
+describe("parsePresetLabelsInput", () => {
+  it("splits and lowercases", () => {
+    expect(parsePresetLabelsInput("A, b;  C ")).toEqual(["a", "b", "c"]);
+  });
+  it("returns empty for blank", () => {
+    expect(parsePresetLabelsInput("  ")).toEqual([]);
+  });
+});
 
 describe("coerceWizardState", () => {
   it("returns defaults for non-objects", () => {
@@ -177,6 +187,7 @@ describe("createWizardPreset", () => {
     const body = JSON.parse(String(arg?.body));
     expect(body.name).toBe("my-preset");
     expect(body.data.state).toBeDefined();
+    expect(body.data.format_version).toBe(1);
   });
 
   it("throws when id missing", async () => {

@@ -25,6 +25,7 @@ import {
   deletePreset,
   getPresetWizard,
   listPresets,
+  parsePresetLabelsInput,
   type PresetSummary,
 } from "./presetApi";
 import { useAwsDiscovery } from "./useAwsDiscovery";
@@ -35,7 +36,13 @@ import {
   readFileAsText,
   stringifyExport,
 } from "./wizardExportImport";
-import { getStarterTemplate, STARTER_TEMPLATES } from "./starterCatalog";
+import {
+  distinctStarterTags,
+  filterStartersByTag,
+  getStarterTemplate,
+  STARTER_CATALOG_TAG_ALL,
+  STARTER_TEMPLATES,
+} from "./starterCatalog";
 import { AiAssistPanel } from "./AiAssistPanel";
 import { isAiAssistUIEnabled } from "./flags";
 import { ManageProfilesModal } from "./ManageProfilesModal";
@@ -71,6 +78,9 @@ export function App() {
   /** When the diff baseline was loaded from a stored preset, its id (used to clear diff if preset is deleted). */
   const [diffBaselinePresetId, setDiffBaselinePresetId] = useState<string | null>(null);
   const [newPresetName, setNewPresetName] = useState("");
+  const [newPresetLabels, setNewPresetLabels] = useState("");
+  const [selectedStarterTag, setSelectedStarterTag] = useState<string>(STARTER_CATALOG_TAG_ALL);
+  const [presetListLabelFilter, setPresetListLabelFilter] = useState("");
   const [presetSaveBusy, setPresetSaveBusy] = useState(false);
   const [presetDeleteBusy, setPresetDeleteBusy] = useState(false);
   const [presetApplyBusy, setPresetApplyBusy] = useState(false);
@@ -318,6 +328,20 @@ export function App() {
     [replaceWithState]
   );
 
+  const filteredStarters = useMemo(
+    () => filterStartersByTag(STARTER_TEMPLATES, selectedStarterTag),
+    [selectedStarterTag]
+  );
+
+  useEffect(() => {
+    if (!selectedStarterId) {
+      return;
+    }
+    if (!filteredStarters.some((t) => t.id === selectedStarterId)) {
+      setSelectedStarterId("");
+    }
+  }, [filteredStarters, selectedStarterId]);
+
   const loadStarterTemplate = useCallback(() => {
     const t = getStarterTemplate(selectedStarterId);
     if (!t) {
@@ -337,6 +361,25 @@ export function App() {
     }
   }, []);
 
+  const starterTagChoices = useMemo(() => distinctStarterTags(STARTER_TEMPLATES), []);
+
+  const presetLabelOptions = useMemo(() => {
+    const s = new Set<string>();
+    for (const p of presets) {
+      for (const l of p.labels ?? []) {
+        s.add(l);
+      }
+    }
+    return [...s].sort((a, b) => a.localeCompare(b));
+  }, [presets]);
+
+  const visiblePresets = useMemo(() => {
+    if (!presetListLabelFilter) {
+      return presets;
+    }
+    return presets.filter((p) => p.labels?.includes(presetListLabelFilter));
+  }, [presets, presetListLabelFilter]);
+
   const saveCurrentAsPreset = useCallback(() => {
     setPresetActionErr(null);
     const name = newPresetName.trim();
@@ -347,8 +390,11 @@ export function App() {
     setPresetSaveBusy(true);
     void (async () => {
       try {
-        const id = await createWizardPreset(name, state);
+        const id = await createWizardPreset(name, state, {
+          labels: parsePresetLabelsInput(newPresetLabels),
+        });
         setNewPresetName("");
+        setNewPresetLabels("");
         await refreshPresets();
         setSelectedPresetId(id);
       } catch (e) {
@@ -357,7 +403,7 @@ export function App() {
         setPresetSaveBusy(false);
       }
     })();
-  }, [newPresetName, state, refreshPresets]);
+  }, [newPresetName, newPresetLabels, state, refreshPresets]);
 
   const onPresetImportFileChange = useCallback(
     (e: ChangeEvent<HTMLInputElement>) => {
@@ -382,8 +428,11 @@ export function App() {
             );
             return;
           }
-          const id = await createWizardPreset(name, w);
+          const id = await createWizardPreset(name, w, {
+            labels: parsePresetLabelsInput(newPresetLabels),
+          });
           setNewPresetName("");
+          setNewPresetLabels("");
           await refreshPresets();
           setSelectedPresetId(id);
         } catch (err) {
@@ -393,7 +442,7 @@ export function App() {
         }
       })();
     },
-    [newPresetName, refreshPresets]
+    [newPresetName, newPresetLabels, refreshPresets]
   );
 
   const deleteSelectedPreset = useCallback(() => {
@@ -540,11 +589,31 @@ export function App() {
         {importErr && <p className={errorClass}>{importErr}</p>}
 
         <div className={`${fieldClass} starter-catalog`}>
-          <label>Starter template (bundled)</label>
+          <label>Quick-builder stack catalog (bundled)</label>
           <p className="help">
             Load a <strong>curated</strong> example end-to-end. Values use obvious placeholder AWS IDs; replace
-            with real subnet, security group, and AMI in your account before you trust generated IaC in AWS.
+            with real subnet, security group, and AMI in your account before you trust generated IaC in AWS. Filter
+            by tag to narrow the list.
           </p>
+          <div className="preset-compare__row">
+            <label htmlFor="starter-tag-filter" className="visually-hidden">
+              Filter by tag
+            </label>
+            <select
+              id="starter-tag-filter"
+              className={inputClass}
+              value={selectedStarterTag}
+              onChange={(e) => setSelectedStarterTag(e.target.value)}
+              aria-label="Filter starter templates by tag"
+            >
+              <option value={STARTER_CATALOG_TAG_ALL}>All tags</option>
+              {starterTagChoices.map((tag) => (
+                <option key={tag} value={tag}>
+                  {tag}
+                </option>
+              ))}
+            </select>
+          </div>
           <div className="preset-compare__row">
             <select
               className={inputClass}
@@ -553,7 +622,7 @@ export function App() {
               aria-label="Bundled starter template"
             >
               <option value="">Choose a starter…</option>
-              {STARTER_TEMPLATES.map((t) => (
+              {filteredStarters.map((t) => (
                 <option key={t.id} value={t.id}>
                   {t.name}
                 </option>
@@ -891,10 +960,35 @@ export function App() {
             reverts). <strong>Set baseline</strong> diffs without changing the form. <strong>Download as JSON</strong>{" "}
             uses the same file shape as <strong>Export configuration</strong> for sharing.{" "}
             <strong>Create from JSON file</strong> uploads a v1 file to the API. <strong>Delete</strong> removes a
-            preset from the API.
+            preset from the API. Presets v1+ support <strong>labels</strong> (team/org “library” tags); the API can
+            also merge defaults from <code>IAC_DEFAULT_PRESET_LABELS</code>.
           </p>
           {presetListErr && <p className="preset-compare__err m43-message--error">{presetListErr}</p>}
           {presetActionErr && <p className="preset-compare__err m43-message--error">{presetActionErr}</p>}
+          {presetLabelOptions.length > 0 && (
+            <div className="preset-compare__row">
+              <label htmlFor="preset-list-label-filter" className="m43-preset-label-filter">
+                Show presets with label
+              </label>
+              <select
+                id="preset-list-label-filter"
+                className={inputClass}
+                value={presetListLabelFilter}
+                onChange={(e) => {
+                  setPresetListLabelFilter(e.target.value);
+                  setSelectedPresetId("");
+                }}
+                aria-label="Filter saved presets by label"
+              >
+                <option value="">All (no label filter)</option>
+                {presetLabelOptions.map((lb) => (
+                  <option key={lb} value={lb}>
+                    {lb}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
           <div className="preset-compare__row">
             <select
               className={inputClass}
@@ -911,13 +1005,21 @@ export function App() {
                   ? "Could not load presets"
                   : presets.length === 0
                     ? "No presets in API"
-                    : "Select a preset…"}
+                    : visiblePresets.length === 0
+                      ? "No presets with this label"
+                      : "Select a preset…"}
               </option>
-              {presets.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name}
-                </option>
-              ))}
+              {visiblePresets.map((p) => {
+                const tag =
+                  p.labels && p.labels.length > 0 ? ` [${[...p.labels].sort().join(", ")}]` : "";
+                return (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                    {tag}
+                    {p.format_version && p.format_version > 0 ? ` (v${p.format_version})` : ""}
+                  </option>
+                );
+              })}
             </select>
             <button
               type="button"
@@ -971,7 +1073,8 @@ export function App() {
           <p className="help">
             Create a new preset from the <strong>current wizard</strong> or a <strong>v1 JSON file</strong> (export /
             download format). The name field is optional for file import: if empty, the file’s basename (without{" "}
-            <code>.json</code>) is used.
+            <code>.json</code>) is used. Optional <strong>labels</strong> (comma-separated) are stored with the preset for
+            filtering; the server can also add defaults from the environment.
           </p>
           <div className="preset-compare__row">
             <input
@@ -986,6 +1089,21 @@ export function App() {
               aria-label="Name for new server preset"
               disabled={presetSaveBusy}
             />
+            <input
+              className={inputClass}
+              value={newPresetLabels}
+              onChange={(e) => {
+                setNewPresetLabels(e.target.value);
+                setPresetActionErr(null);
+              }}
+              placeholder="Labels (optional), e.g. team-core, prod"
+              autoComplete="off"
+              title="Lowercase tag strings for org/team libraries; comma- or semicolon-separated."
+              aria-label="Optional comma-separated labels for the new server preset"
+              disabled={presetSaveBusy}
+            />
+          </div>
+          <div className="preset-compare__row">
             <input
               id="preset-import-json"
               ref={presetImportFileRef}

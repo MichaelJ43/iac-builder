@@ -27,7 +27,7 @@ export function createAppFetchMock() {
         text: async () => "",
       };
     }
-    if (/\/api\/v1\/presets\/?$/.test(u)) {
+    if (/\/api\/v1\/presets\/?(\?.*)?$/.test(u)) {
       return {
         ok: true,
         status: 200,

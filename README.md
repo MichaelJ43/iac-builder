@@ -74,6 +74,7 @@ For shared or production-like self-hosts, the API can block `POST /api/v1/previe
 - [`docs/local-dev.md`](docs/local-dev.md)
 - [`docs/security.md`](docs/security.md)
 - [`docs/future-ideas.md`](docs/future-ideas.md)
+- [`docs/presets-and-catalog.md`](docs/presets-and-catalog.md) — server preset v1 labels, quick-builder (starter) catalog
 - [`docs/ai-assist.md`](docs/ai-assist.md) — optional AI / OpenAI BYOK
 - [`docs/aws-deploy.md`](docs/aws-deploy.md) — S3 + CloudFront + ALB + Lambda in **us-east-1**, GitHub Actions deploy/destroy
 

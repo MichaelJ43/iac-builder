@@ -8,7 +8,6 @@ The table below lists **work that is not done yet**—not a history. When a row 
 
 | Priority | Theme | What’s left |
 |----------|--------|--------|
-| **P3** | Presets & catalogs | **Versioning** (or labels), **quick-builder** stack catalog, optional team/**org** libraries. |
 | **P4** | More frameworks / emitters | CloudFormation, Pulumi, Bicep, CDK, OpenTofu, Crossplane—beyond the current **Terraform**-oriented path. |
 | **P5** | Auth & multi-user (SaaS) | Broader IdP, billing, abuse controls. |
 | **P6** | Cloud onboarding | SSO, assumed roles, identity from CI, workload identity. |
@@ -35,6 +34,10 @@ The **P2** security track is considered **complete** for this repo at the curren
 - **Hints:** e.g. **`vpc-id-missing`**, **`ebs-cmk-consider`**, **`burst-cpu-credits`**, **`secret-ref-data-source`** when app secret names are set; see [`/api/v1/security/recommendations`](security.md).
 - **Generated IaC:** optional `app_secretsmanager_secret_name` / `app_ssm_parameter_name` on `WizardState` → Terraform `data` sources `app_sm` / `app_ssm`; root EBS uses **gp3** when encryption is on. CloudFormation emits **guidance comments** for the same names.
 
+### Completed — P3 (Presets and catalogs)
+
+The **P3** presets/catalog track is **complete** for this repo at the current scope: **preset format_version + labels** (v1 JSON envelope, optional `IAC_DEFAULT_PRESET_LABELS` merge), a larger **tagged quick-builder (starter) catalog** with in-UI tag filtering, and **org-style libraries** via shared label conventions plus env defaults. See [`presets-and-catalog.md`](presets-and-catalog.md).
+
 ---
 
 ## P2 — Security depth (reference)
@@ -43,11 +46,9 @@ The **P2** security track is considered **complete** for this repo at the curren
 
 ---
 
-## P3 — Presets, catalogs, sharing
+## P3 — Presets, catalogs, sharing (reference)
 
-**Shipped (API + UI):** list/create/delete/apply; diff; download/import JSON; profile modal; layout + hints.
-
-**Still to build:** match the P3 row in the table.
+**Shipped:** see **Completed — P3** above.
 
 ---
 
