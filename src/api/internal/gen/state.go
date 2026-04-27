@@ -18,6 +18,10 @@ type WizardState struct {
 	IMDSv2Required     bool     `json:"imdsv2_required"`
 	SSHCIDR            string   `json:"ssh_cidr"` // e.g. 203.0.113.10/32 for security hints
 	EnableEbsEncryption bool    `json:"enable_ebs_encryption"`
+	// Optional: refer to an existing secret by name (not the secret value). Terraform emits data sources;
+	// set IAM on the instance role. Leave empty to omit.
+	AppSecretsManagerSecretName string `json:"app_secretsmanager_secret_name"`
+	AppSSMParameterName         string `json:"app_ssm_parameter_name"`
 }
 
 func (s WizardState) Validate() error {

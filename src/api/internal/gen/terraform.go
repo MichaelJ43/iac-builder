@@ -27,6 +27,26 @@ provider "aws" {
 
 `, s.Region)
 
+	smName := strings.TrimSpace(s.AppSecretsManagerSecretName)
+	ssmName := strings.TrimSpace(s.AppSSMParameterName)
+	if smName != "" {
+		fmt.Fprintf(&b, `data "aws_secretsmanager_secret" "app_sm" {
+  name = %q
+}
+
+`, smName)
+	}
+	if ssmName != "" {
+		fmt.Fprintf(&b, `data "aws_ssm_parameter" "app_ssm" {
+  name = %q
+}
+
+`, ssmName)
+	}
+	if smName != "" || ssmName != "" {
+		fmt.Fprintf(&b, "# Least-privilege IAM on the instance role: read secrets/SSM parameters these data sources reference; do not pass secret *values* in user_data or tags.\n\n")
+	}
+
 	fmt.Fprintf(&b, `resource "aws_instance" "this" {
   ami           = %q
   instance_type = %q
@@ -51,7 +71,8 @@ provider "aws" {
 	}
 	if s.EnableEbsEncryption {
 		fmt.Fprintf(&b, `  root_block_device {
-    encrypted = true
+    encrypted   = true
+    volume_type = "gp3"
   }
 `)
 	}

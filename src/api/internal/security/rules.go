@@ -143,6 +143,27 @@ func Evaluate(s gen.WizardState) []Recommendation {
 		})
 	}
 
+	// Deeper CIS-style: use VPC id in templates and for SG/VPC scoping; subnet alone is ambiguous in reviews.
+	if strings.TrimSpace(s.SubnetID) != "" && strings.TrimSpace(s.VPCID) == "" {
+		out = append(out, Recommendation{
+			ID:          "vpc-id-missing",
+			Severity:    "warning",
+			Message:     "A subnet is set but VPC id is empty; documentation and some policies expect an explicit VPC for the instance.",
+			Remediation: "Set vpc_id to match the subnet’s VPC in the wizard and in security group rules, so generated comments and your reviews align with a single VPC.",
+			Tags:        []string{"cis", "network", "compliance"},
+		})
+	}
+
+	if s.EnableEbsEncryption && wizardLooksReadyForCompute(s) {
+		out = append(out, Recommendation{
+			ID:          "ebs-cmk-consider",
+			Severity:    "info",
+			Message:     "Default AWS-managed encryption is on; for regulated or multi-tenant workloads consider a customer-managed CMK and key policies for separation of duties.",
+			Remediation: "Use aws_kms_key (or an existing CMK) and set the root block device kms_key_id in Terraform, with IAM and KMS key policies that scope encrypt/decrypt to this workload only.",
+			Tags:        []string{"cis", "storage", "kms", "compliance"},
+		})
+	}
+
 	// Deeper CIS-style ops: burstable can throttle under sustained load (4.x EC2, cost practices).
 	if wizardLooksReadyForCompute(s) && isBurstableInstanceType(s.InstanceType) {
 		out = append(out, Recommendation{
@@ -182,6 +203,18 @@ func Evaluate(s gen.WizardState) []Recommendation {
 			Message:     "Do not embed application secrets (API keys, database passwords, tokens) in user data, shell scripts, or static files in the image. Load them at runtime from AWS Secrets Manager or SSM Parameter Store (SecureString) with IAM scoped to specific resource ARNs.",
 			Remediation: "Grant the instance role only secretsmanager:GetSecretValue (and kms:Decrypt for CMK-backed secrets) on required secret ARNs, or use SSM Parameter Store with ssm:GetParameters* as appropriate. In Terraform, reference secrets via data sources or dynamic references—never check secret values into VCS.",
 			Tags:        []string{"secrets", "secrets-manager", "cis", "compliance"},
+		})
+	}
+
+	// P2: live wiring — optional wizard fields that emit data sources in Terraform; IAM still required.
+	if wizardLooksReadyForCompute(s) &&
+		(strings.TrimSpace(s.AppSecretsManagerSecretName) != "" || strings.TrimSpace(s.AppSSMParameterName) != "") {
+		out = append(out, Recommendation{
+			ID:          "secret-ref-data-source",
+			Severity:    "info",
+			Message:     "You set application secret references for generated IaC. Ensure the instance profile or task role can read only those resources, enable rotation, and keep values out of VCS and tags.",
+			Remediation: "Complete IAM with ARNs (secretsmanager:GetSecretValue, ssm:GetParameter) for the data sources, use Secrets Manager rotation where applicable, and pass values to your app via env/SSM, not in user data plaintext.",
+			Tags:        []string{"secrets", "iam", "terraform", "cis", "compliance"},
 		})
 	}
 

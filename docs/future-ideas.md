@@ -8,7 +8,6 @@ The table below lists **work that is not done yet**—not a history. When a row 
 
 | Priority | Theme | What’s left |
 |----------|--------|--------|
-| **P2** | Security depth | More operator env policies, deeper automated CIS, **live** resource wiring to Secrets Manager / Parameter Store from the app. |
 | **P3** | Presets & catalogs | **Versioning** (or labels), **quick-builder** stack catalog, optional team/**org** libraries. |
 | **P4** | More frameworks / emitters | CloudFormation, Pulumi, Bicep, CDK, OpenTofu, Crossplane—beyond the current **Terraform**-oriented path. |
 | **P5** | Auth & multi-user (SaaS) | Broader IdP, billing, abuse controls. |
@@ -28,13 +27,19 @@ The **P1** UX track is considered **complete** for this repo: wizard polish, val
 - **Client-side validation** before preview (aligned with API `Validate()` + format hints).  
 - **AI assist (build-flagged):** `GET/PUT/DELETE /api/v1/ai/openai-key`, `POST /api/v1/ai/assist`, per-IP rate limit, OpenAI BYOK via `IAC_OPENAI_MODEL` / `IAC_OPENAI_BASE_URL` (optional).
 
+### Completed — P2 (Security depth)
+
+The **P2** security track is considered **complete** for this repo at the current scope: **operator env guardrails** for preview, **deeper CIS-style** recommendations, and **live wiring** of existing Secrets Manager / SSM parameters into **Terraform** (data sources) plus **CloudFormation** comments, with optional wizard fields and [`GET /api/v1/operator/guards`](security.md#operator-guardrails-self-hosted).
+
+- **Preview guardrails** (all opt-in via `IAC_*`): `IAC_BLOCK_SSH_OPEN_WORLD`, `IAC_REQUIRE_IMDSV2`, `IAC_REQUIRE_EBS_ENCRYPTION`, `IAC_BLOCK_ASSOCIATE_PUBLIC_IP`. See [Operator guardrails](security.md#operator-guardrails-self-hosted).
+- **Hints:** e.g. **`vpc-id-missing`**, **`ebs-cmk-consider`**, **`burst-cpu-credits`**, **`secret-ref-data-source`** when app secret names are set; see [`/api/v1/security/recommendations`](security.md).
+- **Generated IaC:** optional `app_secretsmanager_secret_name` / `app_ssm_parameter_name` on `WizardState` → Terraform `data` sources `app_sm` / `app_ssm`; root EBS uses **gp3** when encryption is on. CloudFormation emits **guidance comments** for the same names.
+
 ---
 
-## P2 — Security depth
+## P2 — Security depth (reference)
 
-**Shipped (API + hints):** [`/api/v1/security/recommendations`](security.md) with CIS-style tags, remediations, SSH CIDR, SG/key-pair nudges, instance IAM policy JSON, **`secrets-manager-app-runtime`**, **`private-egress-endpoints`**, burstable instance **`burst-cpu-credits`**, and optional **preview** blocking via `IAC_BLOCK_SSH_OPEN_WORLD` (see [Operator guardrails](security.md#operator-guardrails-self-hosted)).
-
-**Still to build:** match the P2 row in the table (additional env policies, deeper CIS, live SM/SSM from the app).
+**Shipped:** see **Completed — P2** above. Use this section as a pointer for links that still say “P2”.
 
 ---
 

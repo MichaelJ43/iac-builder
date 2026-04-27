@@ -40,4 +40,13 @@ describe("buildAiContextForAiAssist", () => {
     const s = { ...emptyWizardState(), ssh_cidr: "  " };
     expect(buildAiContextForAiAssist(s).wizard.ssh_cidr_configured).toBe(false);
   });
+
+  it("sets app_runtime_secret_ref_configured when secret names are set", () => {
+    const s = {
+      ...emptyWizardState(),
+      app_secretsmanager_secret_name: "my/secret",
+      app_ssm_parameter_name: "",
+    };
+    expect(buildAiContextForAiAssist(s).wizard.app_runtime_secret_ref_configured).toBe(true);
+  });
 });

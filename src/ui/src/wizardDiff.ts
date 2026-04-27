@@ -14,6 +14,8 @@ const ORDER: (keyof WizardState)[] = [
   "imdsv2_required",
   "ssh_cidr",
   "enable_ebs_encryption",
+  "app_secretsmanager_secret_name",
+  "app_ssm_parameter_name",
 ];
 
 export const WIZARD_FIELD_LABELS: Record<keyof WizardState, string> = {
@@ -30,6 +32,8 @@ export const WIZARD_FIELD_LABELS: Record<keyof WizardState, string> = {
   imdsv2_required: "Require IMDSv2",
   ssh_cidr: "SSH CIDR",
   enable_ebs_encryption: "Encrypt root EBS",
+  app_secretsmanager_secret_name: "App Secrets Manager name",
+  app_ssm_parameter_name: "App SSM parameter",
 };
 
 function sortedJoin(ids: string[]): string {

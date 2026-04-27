@@ -62,6 +62,12 @@ export function coerceWizardState(raw: unknown): WizardState {
         ? root.enable_ebs_encryption
         : d.enable_ebs_encryption,
     ssh_cidr,
+    app_secretsmanager_secret_name:
+      typeof root.app_secretsmanager_secret_name === "string"
+        ? root.app_secretsmanager_secret_name
+        : d.app_secretsmanager_secret_name,
+    app_ssm_parameter_name:
+      typeof root.app_ssm_parameter_name === "string" ? root.app_ssm_parameter_name : d.app_ssm_parameter_name,
   };
 }
 

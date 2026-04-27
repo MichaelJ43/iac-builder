@@ -65,7 +65,9 @@ The wizard can call an **LLM** for optional text suggestions. **Today** the API 
 
 ## Operator security guardrails (optional)
 
-For shared or production-like self-hosts, the API can block unsafe wizard choices before code preview, for example `IAC_BLOCK_SSH_OPEN_WORLD=1` to reject `ssh_cidr` of `0.0.0.0/0` or `::/0` on `POST /api/v1/preview`. See [`docs/security.md`](docs/security.md#operator-guardrails-self-hosted).
+For shared or production-like self-hosts, the API can block `POST /api/v1/preview` when the wizard would violate **operator** policy. Environment variables (see [`.env.example`](.env.example)) include: `IAC_BLOCK_SSH_OPEN_WORLD`, `IAC_REQUIRE_IMDSV2`, `IAC_REQUIRE_EBS_ENCRYPTION`, and `IAC_BLOCK_ASSOCIATE_PUBLIC_IP` (all opt-in, truthy `1` / `true` / `yes` / `on`). **`GET /api/v1/operator/guards`** returns which flags are active. See [`docs/security.md`](docs/security.md#operator-guardrails-self-hosted).
+
+**Application secrets (optional):** the wizard can list **names** of an existing Secrets Manager secret and/or SSM parameter; **Terraform** preview adds the corresponding `data` sources; you complete IAM and rotation. See the same security doc and **P2 (completed)** in [`docs/future-ideas.md`](docs/future-ideas.md).
 
 ## Documentation
 

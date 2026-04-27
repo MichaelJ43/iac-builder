@@ -238,6 +238,40 @@ func Test_sshCIDROpenWorld(t *testing.T) {
 	}
 }
 
+func TestEvaluate_VpcIdMissing(t *testing.T) {
+	s := gen.WizardState{
+		SubnetID:     "subnet-1",
+		InstanceType: "t3.micro",
+		AMI:          "ami-1",
+	}
+	recs := Evaluate(s)
+	hasID(t, recs, "vpc-id-missing")
+}
+
+func TestEvaluate_EbsCmkWhenEncrypted(t *testing.T) {
+	s := gen.WizardState{
+		SubnetID:              "subnet-1",
+		InstanceType:          "m5.large",
+		AMI:                   "ami-1",
+		EnableEbsEncryption:   true,
+		SecurityGroupIDs:      []string{"sg-1"},
+	}
+	recs := Evaluate(s)
+	hasID(t, recs, "ebs-cmk-consider")
+}
+
+func TestEvaluate_SecretRefDataSource_WhenNamesSet(t *testing.T) {
+	s := gen.WizardState{
+		SubnetID:                   "subnet-1",
+		InstanceType:               "t3.micro",
+		AMI:                        "ami-1",
+		SecurityGroupIDs:           []string{"sg-1"},
+		AppSecretsManagerSecretName: "app/secret",
+	}
+	recs := Evaluate(s)
+	hasID(t, recs, "secret-ref-data-source")
+}
+
 func Test_sshCIDRBroad(t *testing.T) {
 	if !sshCIDRBroad("10.0.0.0/16") {
 		t.Fatal("expected broad")
