@@ -1220,7 +1220,7 @@ export function App() {
           )}
         </details>
         {hints.length > 0 && (
-          <div className="hints">
+          <div className="hints m43-callout-hint">
             <strong>Security hints</strong>
             <ul className="hints-list">
               {hints.map((h) => (
@@ -1233,9 +1233,9 @@ export function App() {
                     <div className="hints-item__tags">{h.tags.join(" · ")}</div>
                   )}
                   {h.remediation && (
-                    <details className="hints-item__remediation">
+                    <details className="hints-item__remediation m43-details--remediation">
                       <summary>Remediation</summary>
-                      <pre>{h.remediation}</pre>
+                      <pre className="m43-inset">{h.remediation}</pre>
                     </details>
                   )}
                 </li>

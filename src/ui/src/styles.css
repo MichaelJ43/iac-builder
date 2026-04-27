@@ -289,13 +289,9 @@ button.primary:not(.m43-button) {
   font-size: 0.95rem;
   line-height: 1.4;
 }
+/* Callout color/surface: m43 m43-callout-hint (m43-tokens + m43-primitives on CDN) */
 .hints {
-  background: var(--ib-bg-hint);
-  border: 1px solid var(--ib-border-hint);
-  padding: 0.75rem;
-  border-radius: var(--ib-radius-md);
   margin-top: 1rem;
-  font-size: 0.9rem;
 }
 .hints-list {
   margin: 0.5rem 0 0;
@@ -340,26 +336,6 @@ button.primary:not(.m43-button) {
   color: var(--ib-fg-muted);
   margin-top: 0.2rem;
 }
-.hints-item__remediation {
-  margin-top: 0.35rem;
-}
-.hints-item__remediation summary {
-  cursor: pointer;
-  font-weight: 600;
-  color: var(--ib-fg);
-}
-.hints-item__remediation pre {
-  margin: 0.35rem 0 0;
-  padding: 0.5rem;
-  background: var(--ib-bg-damage);
-  border: 1px solid var(--ib-border);
-  border-radius: var(--ib-radius-sm);
-  font-size: 0.72rem;
-  overflow: auto;
-  max-height: 14rem;
-  font-family: var(--ib-font-mono);
-}
-
 .ai-assist {
   margin-top: 1.25rem;
   padding-top: 1rem;
