@@ -62,6 +62,7 @@ import { AiAssistPanel } from "./AiAssistPanel";
 import { isAiAssistUIEnabled } from "./flags";
 import { ManageProfilesModal } from "./ManageProfilesModal";
 import { validateWizardForPreview } from "./wizardValidation";
+import { subnetFieldHelp, vpcFieldHelp } from "./wizardCopy";
 
 const frameworks: { id: Framework; label: string }[] = [
   { id: "terraform", label: "Terraform (HCL)" },
@@ -284,6 +285,22 @@ export function App() {
   const frameworkErrId = useId();
   const cloudErrId = useId();
   const sgErrId = useId();
+
+  const wizardStep = useMemo(() => {
+    if (!state.framework) {
+      return { index: 1, title: "Target", detail: "Choose an IaC framework and cloud." };
+    }
+    if (!state.region.trim()) {
+      return { index: 2, title: "Location", detail: "Set region (or namespace / DC label for some targets)." };
+    }
+    if (!state.subnet_id.trim()) {
+      return { index: 3, title: "Network", detail: "Subnet, host, or port group—required for every target." };
+    }
+    if (!canPreview) {
+      return { index: 4, title: "Compute", detail: "Instance size, image, and options." };
+    }
+    return { index: 5, title: "Ready", detail: "Preview updates on the right; review security hints below." };
+  }, [state.framework, state.region, state.subnet_id, canPreview]);
 
   const refresh = useCallback(async () => {
     if (!canPreview) {
@@ -569,6 +586,7 @@ export function App() {
   }, [selectedPresetId, presets]);
 
   const toolbarButtonClass = "toolbar-btn m43-button";
+  const toolbarButtonSecondaryClass = "toolbar-btn m43-button toolbar-btn--secondary";
   const fieldClass = "step m43-field";
   const inputClass = "m43-input";
   const errorClass = "message--error m43-message--error";
@@ -579,33 +597,41 @@ export function App() {
         <header className="m43-site-header">
           <h1>iac-builder</h1>
           <p className="m43-intro">
-            Guided IaC for a single compute VM: <strong>framework</strong>, <strong>cloud</strong>, and{" "}
-            <strong>region</strong>, then an optional <strong>AWS profile</strong> for discovery, then network and
-            compute. <strong>Starter</strong> templates and <strong>server presets</strong> are shortcuts — optional.
+            Walk through <strong>framework</strong>, <strong>cloud</strong>, and <strong>region</strong>, then an
+            optional <strong>AWS profile</strong> for discovery, then <strong>network and compute</strong>. The code
+            preview updates as you go. A <strong>subnet</strong> (or your target’s equivalent) is always required; on
+            AWS, <strong>VPC</strong> is optional and unlocks list hints when a profile is set. The same form covers
+            AWS and other cloud starters (GCP, OCI) plus Kubernetes, Ansible, and VMware. Optional shortcuts: bundled
+            starters and server presets.
           </p>
           {operationsInfo && (
-            <p className="help" role="status">
-              <strong>API deployment</strong>: this instance is in <code>{operationsInfo.region.current}</code> (active
-              API regions: {operationsInfo.region.enabled.join(", ")}). See <code>GET /api/v1/operations</code> for
-              region catalog and posture.
-            </p>
+            <details className="wizard-header-details">
+              <summary>About this API deployment</summary>
+              <p className="help" role="status">
+                This instance: <code>{operationsInfo.region.current}</code>. Active API regions:{" "}
+                {operationsInfo.region.enabled.join(", ")}. Full deployment posture, catalog, and telemetry options
+                are in the <code>operations</code> JSON (for operators and tools): <code>/api/v1/operations</code>
+              </p>
+            </details>
           )}
         </header>
         {operatorGuards?.any_enabled && (
-          <p className="help m43-operator-guards" role="status">
-            The API enforces <strong>operator security guardrails</strong> (the server <code>IAC_*</code> environment).
-            Inappropriate combinations may return an error for code preview. See the project <code>docs/security.md</code>{" "}
-            and <code>GET /api/v1/operator/guards</code> for the active flags.
-          </p>
+          <details className="wizard-header-details m43-operator-guards">
+            <summary>Operator security guardrails are on</summary>
+            <p className="help" role="status">
+              The server may reject some preview requests based on <code>IAC_*</code> environment. See{" "}
+              <code>docs/security.md</code> and the <code>operator/guards</code> JSON (same shape as the UI fetch).
+            </p>
+          </details>
         )}
-        <div className="wizard-toolbar">
+        <div className="wizard-toolbar" id="wizard-toolbar">
           <button type="button" className={toolbarButtonClass} onClick={undo} disabled={!canUndo}>
             Undo
           </button>
           <button type="button" className={toolbarButtonClass} onClick={redo} disabled={!canRedo}>
             Redo
           </button>
-          <button type="button" className={toolbarButtonClass} onClick={exportConfiguration}>
+          <button type="button" className={toolbarButtonSecondaryClass} onClick={exportConfiguration}>
             Export configuration
           </button>
           <input
@@ -621,24 +647,36 @@ export function App() {
             type="button"
             className={toolbarButtonClass}
             onClick={() => importFileRef.current?.click()}
+            id="wizard-import-json"
             aria-describedby="toolbar-json-hint"
-            aria-label="Import configuration from a JSON file on your device"
+            aria-label="Import JSON from your device (replaces the wizard)"
           >
-            Import configuration
+            Import JSON
           </button>
         </div>
         <p className="help wizard-toolbar__hint" id="toolbar-json-hint">
-          <strong>Import configuration</strong> replaces the current wizard. <strong>Create from JSON file</strong> in{" "}
-          <strong>Server presets</strong> below only adds a v1 export to the API; it does not change the form.
+          <strong>Import JSON</strong> replaces the current wizard. <strong>Create from JSON file</strong> in{" "}
+          <a href="#server-presets">Server presets (API)</a> uploads to the API only and does not change the form.
         </p>
         {importErr && <p className={errorClass}>{importErr}</p>}
+
+        <div className="step m43-start-from">
+          <h2 className="m43-start-from__title">Start from</h2>
+          <p className="help">
+            <strong>Load bundled starter</strong> (catalog below),{" "}
+            <a href="#wizard-import-json">import JSON from your device</a> (see toolbar), or use{" "}
+            <a href="#server-presets">server presets (API)</a> to load or save on the server, or diff without
+            changing the form (baseline).{" "}
+            <strong>Export</strong> downloads the wizard as a file; the API preset <strong>download</strong> uses the
+            same v1 shape.
+          </p>
+        </div>
 
         <div className={`${fieldClass} starter-catalog`}>
           <label>Quick-builder stack catalog (bundled)</label>
           <p className="help">
-            Load a <strong>curated</strong> example end-to-end. Values use obvious placeholder AWS IDs; replace
-            with real subnet, security group, and AMI in your account before you trust generated IaC in AWS. Filter
-            by tag to narrow the list.
+            Curated examples use obvious placeholder AWS-style IDs; replace with real values before you trust output.
+            Filter by tag to narrow the list.
           </p>
           <div className="preset-compare__row">
             <label htmlFor="starter-tag-filter" className="visually-hidden">
@@ -684,16 +722,40 @@ export function App() {
           </div>
           {selectedStarter && <p className="help">{selectedStarter.description}</p>}
         </div>
-
-
-
-        <p className="help">
-          This flow targets a single compute unit in one place: <code>aws_instance</code> on AWS, Terraform starters
-          for Google Cloud and OCI, and Kubernetes (YAML), Ansible, or vSphere (Terraform) for non-cloud or hybrid.{" "}
-          <strong>Subnet (or subnetwork, host, or port group, depending on target)</strong> is required. On AWS,{" "}
-          <strong>VPC</strong> is optional; setting it unlocks read-only lists when a credential profile is selected.
-        </p>
         {err && <p className={errorClass}>{err}</p>}
+
+        <nav className="wizard-stepper" aria-labelledby="wizard-step-current">
+          <ol className="wizard-stepper__track">
+            {(
+              [
+                [1, "Target"],
+                [2, "Location"],
+                [3, "Network"],
+                [4, "Compute"],
+                [5, "Ready"],
+              ] as const
+            ).map(([n, label]) => (
+              <li
+                key={n}
+                className={
+                  n < wizardStep.index
+                    ? "wizard-stepper__step wizard-stepper__step--done"
+                    : n === wizardStep.index
+                      ? "wizard-stepper__step wizard-stepper__step--current"
+                      : "wizard-stepper__step"
+                }
+              >
+                <span className="wizard-stepper__num" aria-hidden="true">
+                  {n}
+                </span>
+                <span className="wizard-stepper__name">{label}</span>
+              </li>
+            ))}
+          </ol>
+          <p className="help wizard-stepper__current" id="wizard-step-current">
+            Step {wizardStep.index} of 5: <strong>{wizardStep.title}</strong> — {wizardStep.detail}
+          </p>
+        </nav>
 
         <div className={fieldClass}>
           <label htmlFor="wizard-framework">IaC framework</label>
@@ -779,7 +841,6 @@ export function App() {
             </p>
             {profileListErr && <p className={errorClass}>{profileListErr}</p>}
             {discovery.error && <p className={errorClass}>{discovery.error}</p>}
-            {discovery.discoveryNote && <p className="help">{discovery.discoveryNote}</p>}
             <div className="profile-inline">
               <p className="profile-inline__summary" aria-live="polite">
                 {activeProfile ? (
@@ -819,6 +880,11 @@ export function App() {
         )}
         {canShowNetwork && (
           <>
+            {discovery.discoveryNote && (
+              <p className="help m43-discovery-callout" role="status">
+                {discovery.discoveryNote}
+              </p>
+            )}
             {isAwsCloud(state.cloud) && selectedProfileId && (discovery.loading || discovery.loadingSubnets) && (
               <p className="help" aria-live="polite">
                 Loading AWS read-only suggestions for this profile and region…
@@ -831,18 +897,11 @@ export function App() {
               suggestions={vpcOpts}
               placeholder={vpcFieldPlaceholder(state.cloud || "aws")}
               busy={discoveryListLoading}
-              help={
-                isAwsCloud(state.cloud) && selectedProfileId ? (
-                  <>
-                    Suggested networks in <strong>{state.region || "this region"}</strong> (read-only). Choose a VPC
-                    to filter subnets and security groups, or type any id.
-                  </>
-                ) : isAwsCloud(state.cloud) ? (
-                  "Select a credential profile to load suggestions, or type a VPC id manually."
-                ) : (
-                  "No live list for this cloud; paste a full resource name or id from your project."
-                )
-              }
+              help={vpcFieldHelp(
+                isAwsCloud(state.cloud),
+                selectedProfileId.trim() !== "",
+                state.region
+              )}
               aria-label={networkLabels.vpc}
             />
             <ComboboxField
@@ -852,16 +911,7 @@ export function App() {
               suggestions={subnetOpts}
               placeholder={subnetFieldPlaceholder(state.cloud || "aws")}
               busy={discoverySubnetSgLoading}
-              help={
-                isAwsCloud(state.cloud) ? (
-                  <>
-                    Required for the VM. With a <strong>parent network</strong> and profile, we list AWS subnets; you
-                    can still paste any subnet id.
-                  </>
-                ) : (
-                  "Required. Enter the subnetwork or subnet resource id for your project."
-                )
-              }
+              help={subnetFieldHelp(isAwsCloud(state.cloud))}
               error={fieldErr.subnet_id}
               aria-label={networkLabels.subnet}
             />
@@ -1027,16 +1077,26 @@ export function App() {
         )}
 
 
-        <details className={`${fieldClass} preset-compare preset-compare--details`}>
+        <details
+          id="server-presets"
+          className={`${fieldClass} preset-compare preset-compare--details`}
+        >
           <summary className="preset-compare__summary">Server presets (API)</summary>
           <p className="help">
-            Presets are stored on the server. <strong>Load into wizard</strong> replaces your answers (Undo
-            reverts). <strong>Set baseline</strong> diffs without changing the form. <strong>Download as JSON</strong>{" "}
-            uses the same file shape as <strong>Export configuration</strong> for sharing.{" "}
-            <strong>Create from JSON file</strong> uploads a v1 file to the API. <strong>Delete</strong> removes a
-            preset from the API. Presets v1+ support <strong>labels</strong> (team/org “library” tags); the API can
-            also merge defaults from <code>IAC_DEFAULT_PRESET_LABELS</code>.
+            Presets live on the server. <strong>Load into wizard</strong> replaces the form (Undo reverts).{" "}
+            <strong>Set baseline</strong> diffs without changing the form. <strong>Download as JSON</strong> uses the
+            same v1 shape as <strong>Export configuration</strong>. <strong>Save to API as preset</strong> stores the
+            current wizard; <strong>Create from JSON file</strong> uploads a v1 file to the API only. Optional import
+            name defaults to the file basename. <strong>Delete</strong> removes a preset. Filter and pick a row below, then
+            an action.
           </p>
+          <details className="wizard-header-details">
+            <summary>Labels and default tags</summary>
+            <p className="help">
+              Preset v1+ supports <strong>labels</strong> (team/org library tags). The API may merge{" "}
+              <code>IAC_DEFAULT_PRESET_LABELS</code> on create.
+            </p>
+          </details>
           {presetListErr && <p className="preset-compare__err m43-message--error">{presetListErr}</p>}
           {presetActionErr && <p className="preset-compare__err m43-message--error">{presetActionErr}</p>}
           {presetLabelOptions.length > 0 && (
@@ -1144,12 +1204,6 @@ export function App() {
               {presetDeleteBusy ? "Deleting…" : "Delete preset"}
             </button>
           </div>
-          <p className="help">
-            Create a new preset from the <strong>current wizard</strong> or a <strong>v1 JSON file</strong> (export /
-            download format). The name field is optional for file import: if empty, the file’s basename (without{" "}
-            <code>.json</code>) is used. Optional <strong>labels</strong> (comma-separated) are stored with the preset for
-            filtering; the server can also add defaults from the environment.
-          </p>
           <div className="preset-compare__row">
             <input
               className={inputClass}
@@ -1220,7 +1274,7 @@ export function App() {
           )}
         </details>
         {hints.length > 0 && (
-          <div className="hints">
+          <div className="hints m43-callout-hint">
             <strong>Security hints</strong>
             <ul className="hints-list">
               {hints.map((h) => (
@@ -1233,9 +1287,9 @@ export function App() {
                     <div className="hints-item__tags">{h.tags.join(" · ")}</div>
                   )}
                   {h.remediation && (
-                    <details className="hints-item__remediation">
+                    <details className="hints-item__remediation m43-details--remediation">
                       <summary>Remediation</summary>
-                      <pre>{h.remediation}</pre>
+                      <pre className="m43-inset">{h.remediation}</pre>
                     </details>
                   )}
                 </li>
