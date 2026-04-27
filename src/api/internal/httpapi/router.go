@@ -8,6 +8,7 @@ import (
 	"github.com/MichaelJ43/iac-builder/api/internal/aiassist"
 	"github.com/MichaelJ43/iac-builder/api/internal/auth"
 	"github.com/MichaelJ43/iac-builder/api/internal/gen"
+	"github.com/MichaelJ43/iac-builder/api/internal/ops"
 	"github.com/MichaelJ43/iac-builder/api/internal/security"
 	"github.com/MichaelJ43/iac-builder/api/internal/store"
 	"github.com/go-chi/chi/v5"
@@ -21,6 +22,8 @@ type Server struct {
 	Store   *store.Store
 	Version string
 	Auth    *auth.Platform
+	// Ops is deployment/region/telemetry state (P9). If nil, handlers use a test default (us-east-1 only).
+	Ops *ops.Runtime
 
 	ailOnce sync.Once
 	ail     *aiassist.Limiter
@@ -47,6 +50,9 @@ func (s *Server) Handler() http.Handler {
 	r.Get("/api/v1/ai/prompt-disclosure", s.handleAIPromptDisclosure)
 	// Public: which operator env guardrails (IAC_*) are enabled — no secret values.
 	r.Get("/api/v1/operator/guards", s.handleOperatorGuards)
+	// P9: hosted posture, region catalog, opt-in telemetry contract.
+	r.Get("/api/v1/operations", s.handleOperations)
+	r.Post("/api/v1/operations/telemetry", s.handleOperationsTelemetry)
 
 	r.Post("/api/v1/preview", s.handlePreview)
 	r.Post("/api/v1/security/recommendations", s.handleSecurity)

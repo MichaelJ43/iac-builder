@@ -8,9 +8,9 @@ The table below lists **work that is not done yet**—not a history. When a row 
 
 | Priority | Theme | What’s left |
 |----------|--------|--------|
-| **P9** | Operations | Hosted posture, **opt-in** telemetry, multi-region API. |
+| — | *No active in-repo priority* | Add the next P-row when new work is scheduled. |
 
-*Maintainers: delete a row when its “What’s left” is empty.*
+*Maintainers: delete a row when its “What’s left” is empty. Replace the placeholder row with real priorities when the roadmap moves again.*
 
 **P5 and P6** are not in-repo priorities; they are captured only under [**Commercialization Plan**](#commercialization-plan-out-of-scope) (out of scope for this project).
 
@@ -46,6 +46,10 @@ The **P7** track is **complete** for this repo at the current scope: the wizard 
 ### Completed — P8 (Non-cloud & hybrid)
 
 The **P8** track is **complete** for this repo at the current scope: the wizard can target **Kubernetes** (`k8s`), **Ansible (on-prem)** (`ansible`), or **VMware vSphere** (`vmware`) alongside the public clouds. **Terraform / OpenTofu** emit **starter** artifacts: Kubernetes **Deployment** + **Service** under `k8s/`, **Ansible** `playbook.yml` + `inventory.ini`, and **vSphere** `main.tf` (OpenTofu gets the same header as other HCL). **Other frameworks** (Pulumi, CDK, etc.) are not implemented for these targets and return a clear error, matching GCP/OCI. **Discovery** remains `status: unavailable` with manual entry. See **P8** reference below.
+
+### Completed — P9 (Operations & multi-region readiness)
+
+The **P9** track is **complete** for this repo at the current scope: **hosted posture** and **data residency** are exposed via `GET /api/v1/operations` (TLS termination flag, hosted readiness, deployment region). **Opt-in telemetry**: the operator sets `IAC_TELEMETRY_OPT_IN=1`; clients send `X-IAC-Telemetry-Consent: opt-in` on `POST /api/v1/operations/telemetry` (anonymous event names only; no wizard payloads). **Multi-region API**: a fixed **region catalog** in code lists possible AWS home regions; **`IAC_API_ENABLED_REGIONS`** lists which are active (defaults to **`us-east-1` only** for a single deployment). The UI shows the current and enabled regions. The Terraform **Lambda** module sets `IAC_API_REGION`, `IAC_API_ENABLED_REGIONS`, and `IAC_DATA_RESIDENCY_REGION` from **`var.aws_region`**. To add a second region later, deploy a second stack in that region and/or extend the enabled list. See **P9** reference below.
 
 ---
 
@@ -92,6 +96,6 @@ This section records a **product roadmap shape** for a commercial, multi-tenant 
 
 ---
 
-## P9 — Operations
+## P9 — Operations (reference)
 
-Hosted posture, **opt-in** telemetry, multi-region API. See the P9 row in the table.
+**Shipped:** see **Completed — P9** above. **Endpoints:** `GET /api/v1/operations`, `POST /api/v1/operations/telemetry` (when enabled). **Env (high level):** `IAC_API_REGION`, `IAC_API_ENABLED_REGIONS` (default single-region `us-east-1`), `IAC_TELEMETRY_OPT_IN`, `IAC_HOSTED_TLS_TERMINATION`, `IAC_DATA_RESIDENCY_REGION`.

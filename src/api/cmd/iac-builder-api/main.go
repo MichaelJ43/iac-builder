@@ -9,6 +9,7 @@ import (
 	"github.com/MichaelJ43/iac-builder/api/internal/crypto"
 	"github.com/MichaelJ43/iac-builder/api/internal/gen"
 	"github.com/MichaelJ43/iac-builder/api/internal/httpapi"
+	"github.com/MichaelJ43/iac-builder/api/internal/ops"
 	"github.com/MichaelJ43/iac-builder/api/internal/store"
 )
 
@@ -41,7 +42,11 @@ func main() {
 	if ver == "" {
 		ver = "0.0.0-dev"
 	}
-	srv := &httpapi.Server{Reg: reg, Store: st, Version: ver, Auth: auth.FromEnv()}
+	o, err := ops.NewFromEnv()
+	if err != nil {
+		log.Fatalf("ops: %v", err)
+	}
+	srv := &httpapi.Server{Reg: reg, Store: st, Version: ver, Auth: auth.FromEnv(), Ops: o}
 	addr := ":8080"
 	if v := os.Getenv("LISTEN_ADDR"); v != "" {
 		addr = v

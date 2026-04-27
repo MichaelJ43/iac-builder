@@ -69,7 +69,7 @@ These rules apply to **new or materially changed** behavior (not drive-by refact
 
 ## OpenAPI
 
-Hand-maintained API contracts are described in user docs; the UI calls JSON endpoints under `/api/v1/`.
+Hand-maintained API contracts are described in user docs; the UI calls JSON endpoints under `/api/v1/`. **Operations / P9:** `GET /api/v1/operations` (deployment region, multi-region catalog, hosted posture) and optional `POST /api/v1/operations/telemetry` (when `IAC_TELEMETRY_OPT_IN=1` and the client sends consent).
 
 ## AWS serverless (optional)
 

@@ -338,6 +338,68 @@ func TestPreview_K8s_Terraform(t *testing.T) {
 	}
 }
 
+func TestOperations_GET(t *testing.T) {
+	h, cleanup, err := export.NewTestHandler("file::memory:?cache=shared", mustDecodeHex(testMasterKeyHex))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer cleanup()
+	s := httptest.NewServer(h)
+	defer s.Close()
+	res, err := http.Get(s.URL + "/api/v1/operations")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer res.Body.Close()
+	if res.StatusCode != http.StatusOK {
+		t.Fatalf("status %d", res.StatusCode)
+	}
+	var out struct {
+		AppVersion string `json:"app_version"`
+		Region     struct {
+			Current string   `json:"current"`
+			Enabled []string `json:"enabled"`
+			Catalog []string `json:"catalog"`
+		} `json:"region"`
+		Telemetry struct {
+			ServerOptIn bool `json:"server_opt_in"`
+		} `json:"telemetry"`
+	}
+	if err := json.NewDecoder(res.Body).Decode(&out); err != nil {
+		t.Fatal(err)
+	}
+	if out.AppVersion != "test" {
+		t.Fatalf("version %q", out.AppVersion)
+	}
+	if out.Region.Current != "us-east-1" || len(out.Region.Enabled) != 1 {
+		t.Fatalf("region: %#v", out.Region)
+	}
+	if len(out.Region.Catalog) < 2 {
+		t.Fatal("expected multi-region catalog")
+	}
+	if out.Telemetry.ServerOptIn {
+		t.Fatal("telemetry off in test")
+	}
+}
+
+func TestOperationsTelemetry_Forbidden_Without_OptIn(t *testing.T) {
+	h, cleanup, err := export.NewTestHandler("file::memory:?cache=shared", mustDecodeHex(testMasterKeyHex))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer cleanup()
+	s := httptest.NewServer(h)
+	defer s.Close()
+	res, err := http.Post(s.URL+"/api/v1/operations/telemetry", "application/json", strings.NewReader(`{"event":"test"}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer res.Body.Close()
+	if res.StatusCode != http.StatusForbidden {
+		t.Fatalf("status %d want 403", res.StatusCode)
+	}
+}
+
 func TestPreview_Blocked_SSH_OperatorGuard(t *testing.T) {
 	t.Setenv("IAC_BLOCK_SSH_OPEN_WORLD", "1")
 	h, cleanup, err := export.NewTestHandler("file::memory:?cache=shared", mustDecodeHex(testMasterKeyHex))

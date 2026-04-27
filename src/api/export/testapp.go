@@ -7,6 +7,7 @@ import (
 
 	"github.com/MichaelJ43/iac-builder/api/internal/gen"
 	"github.com/MichaelJ43/iac-builder/api/internal/httpapi"
+	"github.com/MichaelJ43/iac-builder/api/internal/ops"
 	"github.com/MichaelJ43/iac-builder/api/internal/store"
 )
 
@@ -27,6 +28,6 @@ func NewTestHandler(sqliteDSN string, masterKey []byte) (http.Handler, func(), e
 		gen.BicepAWSEmitter{},
 	)
 	_ = os.Setenv("CORS_ORIGIN", "*")
-	s := &httpapi.Server{Reg: reg, Store: st, Version: "test", Auth: nil}
+	s := &httpapi.Server{Reg: reg, Store: st, Version: "test", Auth: nil, Ops: ops.Test()}
 	return s.Handler(), cleanup, nil
 }
