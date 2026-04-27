@@ -642,12 +642,23 @@ export function App() {
         </p>
         {importErr && <p className={errorClass}>{importErr}</p>}
 
+        <div className="step m43-start-from">
+          <h2 className="m43-start-from__title">Start from</h2>
+          <p className="help">
+            <strong>Load bundled starter</strong> (catalog below),{" "}
+            <a href="#wizard-import-json">import JSON from your device</a> (see toolbar), or use{" "}
+            <a href="#server-presets">server presets (API)</a> to load or save on the server, or diff without
+            changing the form (baseline).{" "}
+            <strong>Export</strong> downloads the wizard as a file; the API preset <strong>download</strong> uses the
+            same v1 shape.
+          </p>
+        </div>
+
         <div className={`${fieldClass} starter-catalog`}>
           <label>Quick-builder stack catalog (bundled)</label>
           <p className="help">
-            Load a <strong>curated</strong> example end-to-end. Values use obvious placeholder AWS IDs; replace
-            with real subnet, security group, and AMI in your account before you trust generated IaC in AWS. Filter
-            by tag to narrow the list.
+            Curated examples use obvious placeholder AWS-style IDs; replace with real values before you trust output.
+            Filter by tag to narrow the list.
           </p>
           <div className="preset-compare__row">
             <label htmlFor="starter-tag-filter" className="visually-hidden">
@@ -1027,7 +1038,10 @@ export function App() {
         )}
 
 
-        <details className={`${fieldClass} preset-compare preset-compare--details`}>
+        <details
+          id="server-presets"
+          className={`${fieldClass} preset-compare preset-compare--details`}
+        >
           <summary className="preset-compare__summary">Server presets (API)</summary>
           <p className="help">
             Presets are stored on the server. <strong>Load into wizard</strong> replaces your answers (Undo

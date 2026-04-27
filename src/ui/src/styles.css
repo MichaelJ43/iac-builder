@@ -102,6 +102,20 @@ body {
 .wizard-header-details .help {
   margin: 0.35rem 0 0;
 }
+.m43-start-from {
+  margin-bottom: 0.5rem;
+}
+.m43-start-from__title {
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ib-fg-muted);
+  font-weight: 600;
+  margin: 0 0 0.25rem;
+}
+.m43-start-from .help {
+  margin: 0;
+}
 .slider {
   width: var(--ib-slider-width);
   border-left: 1px solid var(--ib-border);
