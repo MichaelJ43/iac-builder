@@ -8,7 +8,13 @@ import {
   type ChangeEvent,
 } from "react";
 import type { Framework, SecurityRecommendation, WizardState } from "./api";
-import { emptyWizardState, preview, securityRecommendations } from "./api";
+import {
+  emptyWizardState,
+  fetchOperatorGuards,
+  type OperatorGuardsStatus,
+  preview,
+  securityRecommendations,
+} from "./api";
 import { AWS_REGIONS, INSTANCE_TYPE_SUGGESTIONS } from "./awsConstants";
 import { ComboboxField } from "./ComboboxField";
 import { fetchAuthStatus, listCredentialProfiles, type AuthStatus, type ProfileSummary } from "./credentialApi";
@@ -53,6 +59,7 @@ export function App() {
   const [previewText, setPreviewText] = useState("");
   const [hints, setHints] = useState<SecurityRecommendation[]>([]);
   const [err, setErr] = useState<string | null>(null);
+  const [operatorGuards, setOperatorGuards] = useState<OperatorGuardsStatus | null>(null);
 
   const [presets, setPresets] = useState<PresetSummary[]>([]);
   const [presetListErr, setPresetListErr] = useState<string | null>(null);
@@ -111,6 +118,16 @@ export function App() {
     return () => {
       cancelled = true;
     };
+  }, []);
+
+  useEffect(() => {
+    void (async () => {
+      try {
+        setOperatorGuards(await fetchOperatorGuards());
+      } catch {
+        setOperatorGuards(null);
+      }
+    })();
   }, []);
 
   useEffect(() => {
@@ -480,6 +497,13 @@ export function App() {
             compute. <strong>Starter</strong> templates and <strong>server presets</strong> are shortcuts — optional.
           </p>
         </header>
+        {operatorGuards?.any_enabled && (
+          <p className="help m43-operator-guards" role="status">
+            The API enforces <strong>operator security guardrails</strong> (the server <code>IAC_*</code> environment).
+            Inappropriate combinations may return an error for code preview. See the project <code>docs/security.md</code>{" "}
+            and <code>GET /api/v1/operator/guards</code> for the active flags.
+          </p>
+        )}
         <div className="wizard-toolbar">
           <button type="button" className={toolbarButtonClass} onClick={undo} disabled={!canUndo}>
             Undo
@@ -827,6 +851,35 @@ export function App() {
                 Encrypt root EBS
               </label>
             </div>
+            <details className={fieldClass}>
+              <summary>Application secret references (optional, Terraform / guidance)</summary>
+              <p className="help">
+                For <strong>existing</strong> AWS Secrets Manager secrets or SSM parameters (by name, not the secret
+                value). Terraform includes <code>data</code> sources; you still attach an instance profile and IAM. CloudFormation includes comments only; wire IAM yourself.
+              </p>
+              <div className={fieldClass}>
+                <label htmlFor="wizard-sm-secret">Secrets Manager secret name</label>
+                <input
+                  id="wizard-sm-secret"
+                  className={inputClass}
+                  value={state.app_secretsmanager_secret_name}
+                  onChange={(e) => setState((s) => ({ ...s, app_secretsmanager_secret_name: e.target.value }))}
+                  autoComplete="off"
+                  placeholder="e.g. prod/app/database"
+                />
+              </div>
+              <div className={fieldClass}>
+                <label htmlFor="wizard-ssm-param">SSM parameter name (path)</label>
+                <input
+                  id="wizard-ssm-param"
+                  className={inputClass}
+                  value={state.app_ssm_parameter_name}
+                  onChange={(e) => setState((s) => ({ ...s, app_ssm_parameter_name: e.target.value }))}
+                  autoComplete="off"
+                  placeholder="e.g. /myapp/credentials/arn"
+                />
+              </div>
+            </details>
           </>
         )}
 

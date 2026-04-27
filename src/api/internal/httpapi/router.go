@@ -45,6 +45,8 @@ func (s *Server) Handler() http.Handler {
 
 	// Public: no secrets; same prompt strings the server uses for OpenAI BYOK.
 	r.Get("/api/v1/ai/prompt-disclosure", s.handleAIPromptDisclosure)
+	// Public: which operator env guardrails (IAC_*) are enabled — no secret values.
+	r.Get("/api/v1/operator/guards", s.handleOperatorGuards)
 
 	r.Post("/api/v1/preview", s.handlePreview)
 	r.Post("/api/v1/security/recommendations", s.handleSecurity)
@@ -116,6 +118,10 @@ func (s *Server) handlePreview(w http.ResponseWriter, r *http.Request) {
 		State gen.WizardState `json:"state"`
 	}
 	if !readJSON(w, r, &body) {
+		return
+	}
+	if err := security.EnforceOperatorPreview(body.State); err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
 		return
 	}
 	files, err := gen.Preview(r.Context(), s.Reg, body.State)

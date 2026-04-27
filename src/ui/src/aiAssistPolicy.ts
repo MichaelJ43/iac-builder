@@ -32,6 +32,8 @@ export type AiAssistContextV1 = {
     enable_ebs_encryption: boolean;
     /** Whether ssh_cidr is set (boolean only — avoids shipping full CIDR in a tight policy mode later). */
     ssh_cidr_configured: boolean;
+    /** Whether app secret *names* (not values) are configured for IaC data sources. */
+    app_runtime_secret_ref_configured: boolean;
   };
 };
 
@@ -48,6 +50,8 @@ function shortStateHash(s: string): string {
  * Produces a versioned object safe to show in the UI and (later) to send under policy.
  */
 export function buildAiContextForAiAssist(state: WizardState): AiAssistContextV1 {
+  const sm = state.app_secretsmanager_secret_name.trim();
+  const ssm = state.app_ssm_parameter_name.trim();
   const basis = JSON.stringify({
     f: state.framework,
     c: state.cloud,
@@ -62,6 +66,8 @@ export function buildAiContextForAiAssist(state: WizardState): AiAssistContextV1
     i: state.imdsv2_required,
     e: state.enable_ebs_encryption,
     ssh: state.ssh_cidr,
+    sm: sm,
+    ssm: ssm,
   });
   return {
     v: AI_ASSIST_CONTEXT_VERSION,
@@ -81,6 +87,7 @@ export function buildAiContextForAiAssist(state: WizardState): AiAssistContextV1
       imdsv2_required: state.imdsv2_required,
       enable_ebs_encryption: state.enable_ebs_encryption,
       ssh_cidr_configured: state.ssh_cidr.trim() !== "",
+      app_runtime_secret_ref_configured: sm !== "" || ssm !== "",
     },
   };
 }

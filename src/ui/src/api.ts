@@ -33,6 +33,10 @@ export type WizardState = {
   imdsv2_required: boolean;
   ssh_cidr: string;
   enable_ebs_encryption: boolean;
+  /** Existing Secrets Manager secret *name* (not value) for app runtime; Terraform adds a data source. */
+  app_secretsmanager_secret_name: string;
+  /** Existing SSM parameter path for app runtime; Terraform adds a data source. */
+  app_ssm_parameter_name: string;
 };
 
 /** Default wizard used by the UI and preset coercion. */
@@ -51,7 +55,25 @@ export function emptyWizardState(): WizardState {
     imdsv2_required: false,
     ssh_cidr: "",
     enable_ebs_encryption: false,
+    app_secretsmanager_secret_name: "",
+    app_ssm_parameter_name: "",
   };
+}
+
+export type OperatorGuardsStatus = {
+  block_ssh_open_world: boolean;
+  require_imdsv2: boolean;
+  require_ebs_encryption: boolean;
+  block_associate_public_ip: boolean;
+  any_enabled: boolean;
+};
+
+export async function fetchOperatorGuards(): Promise<OperatorGuardsStatus> {
+  const res = await fetch(`${base}/api/v1/operator/guards`, withCredentials);
+  if (!res.ok) {
+    throw new Error(await normalizeFetchError(res));
+  }
+  return (await res.json()) as OperatorGuardsStatus;
 }
 
 export async function preview(state: WizardState): Promise<Record<string, string>> {
