@@ -1,24 +1,10 @@
 /** @vitest-environment jsdom */
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { renderHook, act } from "@testing-library/react";
-import type { WizardState } from "@ui/api";
+import { emptyWizardState, type WizardState } from "@ui/api";
 import { useWizardUndoState } from "@ui/useWizardUndoState";
 
-const empty = (): WizardState => ({
-  framework: "",
-  cloud: "aws",
-  region: "",
-  vpc_id: "",
-  subnet_id: "",
-  instance_type: "",
-  ami: "",
-  key_name: "",
-  security_group_ids: [],
-  associate_public_ip: false,
-  imdsv2_required: false,
-  ssh_cidr: "",
-  enable_ebs_encryption: false,
-});
+const empty = (): WizardState => emptyWizardState();
 
 describe("useWizardUndoState", () => {
   beforeEach(() => {
@@ -32,9 +18,9 @@ describe("useWizardUndoState", () => {
     const { result } = renderHook(() => useWizardUndoState(empty()));
 
     act(() => {
-      result.current.setWizard((s) => ({ ...s, region: "us-west-2" }));
+      result.current.setWizard((s) => ({ ...s, regions: ["us-west-2"], region: "us-west-2" }));
     });
-    expect(result.current.state.region).toBe("us-west-2");
+    expect(result.current.state.regions).toEqual(["us-west-2"]);
     expect(result.current.canUndo).toBe(true);
 
     act(() => {
@@ -45,39 +31,39 @@ describe("useWizardUndoState", () => {
     act(() => {
       result.current.undo();
     });
-    expect(result.current.state.region).toBe("");
+    expect(result.current.state.regions).toEqual([]);
     expect(result.current.canRedo).toBe(true);
 
     act(() => {
       result.current.redo();
     });
-    expect(result.current.state.region).toBe("us-west-2");
+    expect(result.current.state.regions).toEqual(["us-west-2"]);
   });
 
   it("undo without waiting flush still commits burst", () => {
     const { result } = renderHook(() => useWizardUndoState(empty()));
 
     act(() => {
-      result.current.setWizard((s) => ({ ...s, region: "eu-central-1" }));
+      result.current.setWizard((s) => ({ ...s, regions: ["eu-central-1"], region: "eu-central-1" }));
     });
     act(() => {
       result.current.undo();
     });
-    expect(result.current.state.region).toBe("");
+    expect(result.current.state.regions).toEqual([]);
   });
 
   it("replaceWithState clears undo/redo and sets present", () => {
     const { result } = renderHook(() => useWizardUndoState(empty()));
 
     act(() => {
-      result.current.setWizard((s) => ({ ...s, region: "ap-south-1" }));
+      result.current.setWizard((s) => ({ ...s, regions: ["ap-south-1"], region: "ap-south-1" }));
     });
     act(() => {
       vi.advanceTimersByTime(350);
     });
     expect(result.current.canUndo).toBe(true);
 
-    const next: WizardState = { ...empty(), framework: "pulumi", region: "us-west-1" };
+    const next: WizardState = { ...empty(), framework: "pulumi", regions: ["us-west-1"], region: "us-west-1" };
     act(() => {
       result.current.replaceWithState(next);
     });

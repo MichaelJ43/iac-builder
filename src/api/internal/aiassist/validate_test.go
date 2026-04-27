@@ -27,8 +27,25 @@ func TestValidateContextV1_ok(t *testing.T) {
 }
 
 func TestValidateContextV1_badV(t *testing.T) {
-	if err := ValidateContextV1([]byte(`{"v":2,"app":"iac-builder","wizard":{}}`)); err == nil {
+	if err := ValidateContextV1([]byte(`{"v":3,"app":"iac-builder","wizard":{}}`)); err == nil {
 		t.Fatal("expected error")
+	}
+}
+
+func TestValidateContextV1_v2_ok(t *testing.T) {
+	b, _ := json.Marshal(map[string]any{
+		"v":   2,
+		"app": "iac-builder",
+		"wizard": map[string]any{
+			"framework": "terraform",
+			"cloud":     "aws",
+			"region":    "us-east-1",
+			"regions":   []string{"us-east-1"},
+		},
+		"stateSummaryLabel": "x",
+	})
+	if err := ValidateContextV1(b); err != nil {
+		t.Fatal(err)
 	}
 }
 

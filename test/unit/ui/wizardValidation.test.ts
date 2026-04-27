@@ -6,6 +6,7 @@ function validAwsBase() {
   const s = emptyWizardState();
   s.framework = "terraform";
   s.cloud = "aws";
+  s.regions = ["us-east-1"];
   s.region = "us-east-1";
   s.subnet_id = "subnet-0123456789abcdef0";
   s.instance_type = "t3.micro";
@@ -28,12 +29,13 @@ describe("validateWizardForPreview", () => {
     expect(fields.framework).toBeTruthy();
   });
 
-  it("fails when region is blank", () => {
+  it("fails when target regions are empty", () => {
     const s = validAwsBase();
+    s.regions = [];
     s.region = "  ";
     const { ok, fields } = validateWizardForPreview(s);
     expect(ok).toBe(false);
-    expect(fields.region).toMatch(/required/i);
+    expect(fields.regions).toMatch(/primary AWS region|required|region/i);
   });
 
   it("fails when subnet_id is blank", () => {

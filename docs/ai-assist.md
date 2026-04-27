@@ -19,14 +19,14 @@ This document describes optional **AI assist** in the iac-builder web UI. The **
 
 ## `POST /api/v1/ai/assist`
 
-- **Body:** `{ "context": <v1 object> }` from `buildAiContextForAiAssist` (`v: 1`, `app: "iac-builder"`, `wizard` object, etc.).
+- **Body:** `{ "context": <object> }` from `buildAiContextForAiAssist` (`v: 2`, `app: "iac-builder"`, `wizard` includes `regions[]` plus legacy `region` for the primary, etc.).
 - **Rate limit:** per client IP, per minute — `IAC_AI_ASSIST_RPM` (default **20**). **429** + `Retry-After: 60` when exceeded.
 - **With a saved key:** the server calls OpenAI with your key; response includes `mode: "openai"` and `suggestions` (string). **Env:** `IAC_OPENAI_MODEL` (default `gpt-4o-mini`), `IAC_OPENAI_BASE_URL` (default `https://api.openai.com`, override for tests or proxies).
 - **Without a key:** `mode: "stub"`, with a message explaining BYOK; no call to OpenAI.
 
 ## Data sent to the model (contract)
 
-- **In scope:** the same **v1 JSON context** as in the panel (IaC parameters only). It does **not** include the app’s `IAC_MASTER_KEY`, your encrypted AWS profiles, or generated file bodies.
+- **In scope:** the same **versioned JSON context** as in the panel (IaC parameters only; `AI_ASSIST_CONTEXT_VERSION` in `aiAssistPolicy.ts`). It does **not** include the app’s `IAC_MASTER_KEY`, your encrypted AWS profiles, or generated file bodies.
 - **User responsibility:** treat model output as **untrusted**; use preview and security recommendations before any real deployment.
 
 ## Controls in the panel

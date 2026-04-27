@@ -15,7 +15,8 @@ type contextV1 struct {
 	Wizard json.RawMessage `json:"wizard"`
 }
 
-// ValidateContextV1 checks JSON for the v1 contract used by the UI (see docs/ai-assist.md).
+// ValidateContextV1 checks JSON for the AI assist context from the UI (see docs/ai-assist.md).
+// Supported versions: v=1 and v=2 (same top-level shape; v2 adds fields inside wizard).
 func ValidateContextV1(raw json.RawMessage) error {
 	if len(raw) == 0 {
 		return fmt.Errorf("%w: empty context", ErrInvalidContext)
@@ -24,8 +25,8 @@ func ValidateContextV1(raw json.RawMessage) error {
 	if err := json.Unmarshal(raw, &c); err != nil {
 		return err
 	}
-	if c.V != 1 {
-		return fmt.Errorf("%w: expected v=1", ErrInvalidContext)
+	if c.V != 1 && c.V != 2 {
+		return fmt.Errorf("%w: expected v=1 or v=2", ErrInvalidContext)
 	}
 	if c.App != "iac-builder" {
 		return fmt.Errorf("%w: app must be iac-builder", ErrInvalidContext)

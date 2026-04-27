@@ -27,7 +27,7 @@ Or individually:
 - `cd src/api && GOSUMDB=off go test ./...`
 - `cd test/component && GOSUMDB=off go test ./...`
 - `cd src/ui && npm ci && npm run test:unit` (and `npm run test:unit:coverage` when checking coverage thresholds)
-- `cd test/ui && npm ci && npx playwright install chromium && npm test` (e2e Vite uses port **33331** by default, via [`test/ui/playwright.config.ts`](test/ui/playwright.config.ts), to avoid clashing with a dev server on 5173; override with `PLAYWRIGHT_VITE_PORT`. `make test` sets `PLAYWRIGHT_BROWSERS_PATH` to `test/ui/.playwright-browsers` so browser binaries live in the repo (gitignored) and the same path works in sandboxed/IDE runners; GitHub Actions uses the default cache. GitHub Actions sets `CI=true` for Playwright. Local `make test` does not force `CI=true` for Playwright so `reuseExistingServer` can apply.)
+- `cd test/ui && npm ci && npx playwright install chromium && npm test` (install **src/ui** first: `cd src/ui && npm ci` — a `pretest` script errors if it is missing. e2e Vite uses port **33331** by default, via [`test/ui/playwright.config.ts`](test/ui/playwright.config.ts), to avoid clashing with 5173; override with `PLAYWRIGHT_VITE_PORT`. `make test` sets `CI=true` and `PLAYWRIGHT_BROWSERS_PATH` to `test/ui/.playwright-browsers` (gitignored) so local runs match GitHub Actions. Playwright no longer reuses ad-hoc processes on 33331/8080 by default; set `PW_REUSE_E2E_SERVERS=1` if you need that.)
 
 ## Test coverage expectations
 

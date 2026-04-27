@@ -10,6 +10,7 @@ import {
 const sample: WizardState = {
   ...emptyWizardState(),
   framework: "terraform",
+  regions: ["us-east-1"],
   region: "us-east-1",
   subnet_id: "subnet-abc",
   instance_type: "t3.micro",
@@ -28,7 +29,7 @@ describe("wizardExportImport", () => {
   });
 
   it("parses API-style { state: ... }", () => {
-    const s = { state: { ...sample, region: "eu-west-1" } };
+    const s = { state: { ...sample, regions: ["eu-west-1"], region: "eu-west-1" } };
     const back = parseWizardImport(JSON.stringify(s));
     expect(back.region).toBe("eu-west-1");
   });

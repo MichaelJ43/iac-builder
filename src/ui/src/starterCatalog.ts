@@ -16,7 +16,14 @@ function withDefaults(
   base: Pick<WizardState, "framework" | "region" | "subnet_id" | "instance_type" | "ami"> &
     Partial<WizardState>
 ): WizardState {
-  return { ...emptyWizardState(), ...base, cloud: "aws" };
+  const regions =
+    base.regions && base.regions.length > 0
+      ? base.regions
+      : base.region
+        ? [base.region]
+        : [];
+  const region = regions[0] ?? base.region ?? "";
+  return { ...emptyWizardState(), ...base, cloud: "aws", regions, region };
 }
 
 /**

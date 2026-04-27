@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import type { WizardState } from "@ui/api";
+import { emptyWizardState, type WizardState } from "@ui/api";
 import {
   applyEdit,
   canRedo,
@@ -16,8 +16,10 @@ import {
 } from "@ui/wizardHistory";
 
 const base = (): WizardState => ({
+  ...emptyWizardState(),
   framework: "terraform",
   cloud: "aws",
+  regions: ["us-east-1"],
   region: "us-east-1",
   vpc_id: "",
   subnet_id: "subnet-a",
@@ -29,6 +31,8 @@ const base = (): WizardState => ({
   imdsv2_required: false,
   ssh_cidr: "",
   enable_ebs_encryption: false,
+  app_secretsmanager_secret_name: "",
+  app_ssm_parameter_name: "",
 });
 
 describe("wizardHistory", () => {
@@ -36,13 +40,16 @@ describe("wizardHistory", () => {
     const a = base();
     const b = cloneWizard(a);
     expect(b).toEqual(a);
+    b.regions = ["eu-west-1"];
     b.region = "eu-west-1";
-    expect(a.region).toBe("us-east-1");
+    expect(a.regions).toEqual(["us-east-1"]);
   });
 
   it("wizardStatesEqual compares serialized shape", () => {
     expect(wizardStatesEqual(base(), base())).toBe(true);
-    expect(wizardStatesEqual(base(), { ...base(), region: "x" })).toBe(false);
+    expect(
+      wizardStatesEqual(base(), { ...base(), regions: ["x"], region: "x" })
+    ).toBe(false);
   });
 
   it("initialWizardHistory starts empty stacks", () => {
@@ -55,7 +62,11 @@ describe("wizardHistory", () => {
 
   it("commitBurst pushes snapshot when present changed", () => {
     const start = base();
-    const c = { past: [], present: { ...start, region: "eu-west-1" }, future: [] as WizardState[] };
+    const c = {
+      past: [],
+      present: { ...start, regions: ["eu-west-1"], region: "eu-west-1" },
+      future: [] as WizardState[],
+    };
     const out = commitBurst(c, start);
     expect(out.past).toHaveLength(1);
     expect(wizardStatesEqual(out.past[0]!, start)).toBe(true);
@@ -77,7 +88,7 @@ describe("wizardHistory", () => {
 
   it("undoCore and redoCore move snapshots", () => {
     const a = base();
-    const b = { ...a, region: "eu-west-1" };
+    const b = { ...a, regions: ["eu-west-1"], region: "eu-west-1" };
     const c = { past: [a], present: b, future: [] as WizardState[] };
     const u = undoCore(c);
     expect(u.present.region).toBe("us-east-1");
@@ -102,44 +113,44 @@ describe("wizardHistory", () => {
       ...initialWizardHistory(base()),
       future: [base()],
     };
-    const next = applyEdit(h, (p) => ({ ...p, region: "eu-west-1" }));
+    const next = applyEdit(h, (p) => ({ ...p, regions: ["eu-west-1"], region: "eu-west-1" }));
     expect(next.burstStart?.region).toBe("us-east-1");
-    expect(next.present.region).toBe("eu-west-1");
+    expect(next.present.regions).toEqual(["eu-west-1"]);
     expect(next.future).toHaveLength(0);
   });
 
   it("applyEdit keeps burst snapshot on follow-up edits", () => {
     let h = initialWizardHistory(base());
-    h = applyEdit(h, (p) => ({ ...p, region: "a" }));
-    h = applyEdit(h, (p) => ({ ...p, region: "ab" }));
+    h = applyEdit(h, (p) => ({ ...p, regions: ["a"], region: "a" }));
+    h = applyEdit(h, (p) => ({ ...p, regions: ["ab"], region: "ab" }));
     expect(h.burstStart?.region).toBe("us-east-1");
-    expect(h.present.region).toBe("ab");
+    expect(h.present.regions).toEqual(["ab"]);
   });
 
   it("undoHistory flushes burst then pops past", () => {
     let h = initialWizardHistory(base());
-    h = applyEdit(h, (p) => ({ ...p, region: "x" }));
+    h = applyEdit(h, (p) => ({ ...p, regions: ["x"], region: "x" }));
     h = flushBurstStart(h);
     expect(h.past).toHaveLength(1);
     h = undoHistory(h);
-    expect(h.present.region).toBe("us-east-1");
+    expect(h.present.regions).toEqual(["us-east-1"]);
     expect(h.future).toHaveLength(1);
   });
 
   it("redoHistory reapplies future head", () => {
     let h = initialWizardHistory(base());
-    h = applyEdit(h, (p) => ({ ...p, region: "x" }));
+    h = applyEdit(h, (p) => ({ ...p, regions: ["x"], region: "x" }));
     h = flushBurstStart(h);
     h = undoHistory(h);
     h = redoHistory(h);
-    expect(h.present.region).toBe("x");
+    expect(h.present.regions).toEqual(["x"]);
     expect(h.future).toHaveLength(0);
   });
 
   it("canUndo reflects pending burst", () => {
     let h = initialWizardHistory(base());
     expect(canUndo(h)).toBe(false);
-    h = applyEdit(h, (p) => ({ ...p, region: "z" }));
+    h = applyEdit(h, (p) => ({ ...p, regions: ["z"], region: "z" }));
     expect(canUndo(h)).toBe(true);
   });
 

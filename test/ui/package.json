@@ -3,7 +3,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "playwright test"
+    "pretest": "node ./scripts/ensure-src-ui-deps.mjs",
+    "test": "playwright test",
+    "test:ci": "CI=true playwright test"
   },
   "devDependencies": {
     "@playwright/test": "^1.46.1"

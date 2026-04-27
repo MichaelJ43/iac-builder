@@ -1,10 +1,11 @@
 import type { WizardState } from "./api";
+import { targetRegionsFromState } from "./wizardRegions";
 
 /**
  * Bumped when the **shape** of the AI context object changes. Review
  * docs/ai-assist.md when incrementing.
  */
-export const AI_ASSIST_CONTEXT_VERSION = 1 as const;
+export const AI_ASSIST_CONTEXT_VERSION = 2 as const;
 
 /**
  * Opaque, JSON-friendly object intended for a future opt-in model call.
@@ -18,6 +19,8 @@ export type AiAssistContextV1 = {
   wizard: {
     framework: string;
     cloud: string;
+    /** Target region ids (e.g. multiple AWS regions). */
+    regions: string[];
     region: string;
     /** Resource identifiers; not secret access keys. */
     vpc_id: string;
@@ -50,12 +53,13 @@ function shortStateHash(s: string): string {
  * Produces a versioned object safe to show in the UI and (later) to send under policy.
  */
 export function buildAiContextForAiAssist(state: WizardState): AiAssistContextV1 {
+  const tr = targetRegionsFromState(state);
   const sm = state.app_secretsmanager_secret_name.trim();
   const ssm = state.app_ssm_parameter_name.trim();
   const basis = JSON.stringify({
     f: state.framework,
     c: state.cloud,
-    r: state.region,
+    r: tr.join(",") || state.region,
     v: state.vpc_id,
     s: state.subnet_id,
     t: state.instance_type,
@@ -76,7 +80,8 @@ export function buildAiContextForAiAssist(state: WizardState): AiAssistContextV1
     wizard: {
       framework: state.framework,
       cloud: state.cloud,
-      region: state.region,
+      regions: tr,
+      region: tr[0] ?? state.region,
       vpc_id: state.vpc_id,
       subnet_id: state.subnet_id,
       instance_type: state.instance_type,

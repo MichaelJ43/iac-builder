@@ -1,5 +1,6 @@
 import { withCredentials } from "./fetchWithCredentials";
 import { normalizeFetchError } from "./fetchUtils";
+import { normalizeWizardStateForAPI } from "./wizardRegions";
 
 const base = "";
 
@@ -28,6 +29,8 @@ export const FRAMEWORK_IDS: Framework[] = [
 export type WizardState = {
   framework: Framework | "";
   cloud: CloudId | "";
+  /** Target regions; first is used for AWS discovery. Kept in sync with legacy `region`. */
+  regions: string[];
   region: string;
   vpc_id: string;
   subnet_id: string;
@@ -50,6 +53,7 @@ export function emptyWizardState(): WizardState {
   return {
     framework: "",
     cloud: "aws" satisfies CloudId,
+    regions: [],
     region: "",
     vpc_id: "",
     subnet_id: "",
@@ -111,11 +115,12 @@ export async function fetchOperationsInfo(): Promise<OperationsInfo> {
 }
 
 export async function preview(state: WizardState): Promise<Record<string, string>> {
+  const stateOut = normalizeWizardStateForAPI(state);
   const res = await fetch(`${base}/api/v1/preview`, {
     ...withCredentials,
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ state }),
+    body: JSON.stringify({ state: stateOut }),
   });
   if (!res.ok) throw new Error(await normalizeFetchError(res));
   const data = (await res.json()) as { files: Record<string, string> };
@@ -131,11 +136,12 @@ export type SecurityRecommendation = {
 };
 
 export async function securityRecommendations(state: WizardState): Promise<SecurityRecommendation[]> {
+  const stateOut = normalizeWizardStateForAPI(state);
   const res = await fetch(`${base}/api/v1/security/recommendations`, {
     ...withCredentials,
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ state }),
+    body: JSON.stringify({ state: stateOut }),
   });
   if (!res.ok) throw new Error(await normalizeFetchError(res));
   const data = (await res.json()) as { recommendations: SecurityRecommendation[] };

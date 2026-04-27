@@ -3,7 +3,7 @@ import type { WizardState } from "./api";
 const ORDER: (keyof WizardState)[] = [
   "framework",
   "cloud",
-  "region",
+  "regions",
   "vpc_id",
   "subnet_id",
   "instance_type",
@@ -21,7 +21,8 @@ const ORDER: (keyof WizardState)[] = [
 export const WIZARD_FIELD_LABELS: Record<keyof WizardState, string> = {
   framework: "IaC framework",
   cloud: "Cloud",
-  region: "Region",
+  regions: "Target regions",
+  region: "Region (primary)",
   vpc_id: "VPC ID",
   subnet_id: "Subnet ID",
   instance_type: "Instance type",
@@ -41,9 +42,11 @@ function sortedJoin(ids: string[]): string {
 }
 
 function fieldEqual(key: keyof WizardState, a: WizardState, b: WizardState): boolean {
-  if (key === "security_group_ids") {
-    const xa = sortedJoin(a.security_group_ids);
-    const xb = sortedJoin(b.security_group_ids);
+  if (key === "security_group_ids" || key === "regions") {
+    const ar = a.regions ?? [];
+    const br = b.regions ?? [];
+    const xa = key === "regions" ? ar.join(",") : sortedJoin(a.security_group_ids);
+    const xb = key === "regions" ? br.join(",") : sortedJoin(b.security_group_ids);
     return xa === xb;
   }
   return a[key] === b[key];
@@ -52,6 +55,10 @@ function fieldEqual(key: keyof WizardState, a: WizardState, b: WizardState): boo
 function formatField(key: keyof WizardState, value: WizardState[keyof WizardState]): string {
   if (key === "security_group_ids") {
     const ids = value as string[];
+    return ids.length ? ids.join(", ") : "(none)";
+  }
+  if (key === "regions") {
+    const ids = (value as string[] | undefined) ?? [];
     return ids.length ? ids.join(", ") : "(none)";
   }
   if (

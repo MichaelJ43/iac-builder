@@ -1,10 +1,12 @@
 import { describe, it, expect } from "vitest";
-import type { WizardState } from "@ui/api";
+import { emptyWizardState, type WizardState } from "@ui/api";
 import { diffWizardStates, WIZARD_FIELD_LABELS } from "@ui/wizardDiff";
 
 const base = (): WizardState => ({
+  ...emptyWizardState(),
   framework: "terraform",
   cloud: "aws",
+  regions: ["us-east-1"],
   region: "us-east-1",
   vpc_id: "",
   subnet_id: "subnet-a",
@@ -16,6 +18,8 @@ const base = (): WizardState => ({
   imdsv2_required: false,
   ssh_cidr: "",
   enable_ebs_encryption: false,
+  app_secretsmanager_secret_name: "",
+  app_ssm_parameter_name: "",
 });
 
 describe("diffWizardStates", () => {
@@ -32,10 +36,10 @@ describe("diffWizardStates", () => {
 
   it("lists differing fields with labels", () => {
     const a = base();
-    const b = { ...a, region: "eu-west-1", associate_public_ip: true };
+    const b = { ...a, regions: ["eu-west-1"], region: "eu-west-1", associate_public_ip: true };
     const d = diffWizardStates(a, b);
-    expect(d.map((x) => x.key)).toEqual(["region", "associate_public_ip"]);
-    expect(d[0]?.label).toBe(WIZARD_FIELD_LABELS.region);
+    expect(d.map((x) => x.key)).toEqual(["regions", "associate_public_ip"]);
+    expect(d[0]?.label).toBe(WIZARD_FIELD_LABELS.regions);
     expect(d[0]?.baseline).toBe("us-east-1");
     expect(d[0]?.current).toBe("eu-west-1");
     expect(d[1]?.baseline).toBe("No");

@@ -7,6 +7,7 @@ import { PresetDiffTable } from "@ui/PresetDiffTable";
 const a = (): WizardState => ({
   framework: "terraform",
   cloud: "aws",
+  regions: ["us-east-1"],
   region: "us-east-1",
   vpc_id: "",
   subnet_id: "subnet-1",
@@ -18,6 +19,8 @@ const a = (): WizardState => ({
   imdsv2_required: false,
   ssh_cidr: "",
   enable_ebs_encryption: false,
+  app_secretsmanager_secret_name: "",
+  app_ssm_parameter_name: "",
 });
 
 describe("PresetDiffTable", () => {
@@ -33,9 +36,9 @@ describe("PresetDiffTable", () => {
 
   it("renders table rows and calls onClear", () => {
     const onClear = vi.fn();
-    const cur = { ...a(), region: "eu-west-1" };
+    const cur = { ...a(), regions: ["eu-west-1"], region: "eu-west-1" };
     render(<PresetDiffTable name="Prod" baseline={a()} current={cur} onClear={onClear} />);
-    expect(screen.getByText("Region")).toBeTruthy();
+    expect(screen.getByText("Target regions")).toBeTruthy();
     expect(screen.getByText("us-east-1")).toBeTruthy();
     expect(screen.getByText("eu-west-1")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: /clear baseline/i }));

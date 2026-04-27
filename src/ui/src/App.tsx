@@ -63,6 +63,7 @@ import { isAiAssistUIEnabled } from "./flags";
 import { ManageProfilesModal } from "./ManageProfilesModal";
 import { validateWizardForPreview } from "./wizardValidation";
 import { subnetFieldHelp, vpcFieldHelp } from "./wizardCopy";
+import { mergeAwsRegions, targetRegionsFromState } from "./wizardRegions";
 
 const frameworks: { id: Framework; label: string }[] = [
   { id: "terraform", label: "Terraform (HCL)" },
@@ -214,10 +215,15 @@ export function App() {
     [profiles, selectedProfileId]
   );
 
+  const discoveryRegion = useMemo(
+    () => targetRegionsFromState(state)[0] ?? "",
+    [state.regions, state.region]
+  );
+
   const discovery = useCloudDiscovery(
     (state.cloud || "aws") as CloudId,
     selectedProfileId,
-    state.region,
+    discoveryRegion,
     state.vpc_id
   );
 
@@ -259,21 +265,21 @@ export function App() {
 
   const discoveryListLoading = useMemo(
     () =>
-      selectedProfileId.trim() !== "" && state.region.trim() !== "" && discovery.loading,
-    [selectedProfileId, state.region, discovery.loading]
+      selectedProfileId.trim() !== "" && discoveryRegion.trim() !== "" && discovery.loading,
+    [selectedProfileId, discoveryRegion, discovery.loading]
   );
   const discoverySubnetSgLoading = useMemo(
     () =>
       selectedProfileId.trim() !== "" &&
-      state.region.trim() !== "" &&
+      discoveryRegion.trim() !== "" &&
       state.vpc_id.trim() !== "" &&
       discovery.loadingSubnets,
-    [selectedProfileId, state.region, state.vpc_id, discovery.loadingSubnets]
+    [selectedProfileId, discoveryRegion, state.vpc_id, discovery.loadingSubnets]
   );
 
   const canShowCloud = state.framework !== "";
   const canShowRegion = canShowCloud;
-  const canShowNetwork = state.region.trim() !== "";
+  const canShowNetwork = discoveryRegion.trim() !== "";
   const canShowCompute = state.subnet_id.trim() !== "";
   const canSaveProfile =
     authStatus !== null && (authStatus.kind === "disabled" || authStatus.kind === "signedIn");
@@ -290,7 +296,7 @@ export function App() {
     if (!state.framework) {
       return { index: 1, title: "Target", detail: "Choose an IaC framework and cloud." };
     }
-    if (!state.region.trim()) {
+    if (!discoveryRegion.trim()) {
       return { index: 2, title: "Location", detail: "Set region (or namespace / DC label for some targets)." };
     }
     if (!state.subnet_id.trim()) {
@@ -300,7 +306,7 @@ export function App() {
       return { index: 4, title: "Compute", detail: "Instance size, image, and options." };
     }
     return { index: 5, title: "Ready", detail: "Preview updates on the right; review security hints below." };
-  }, [state.framework, state.region, state.subnet_id, canPreview]);
+  }, [state.framework, discoveryRegion, state.subnet_id, canPreview]);
 
   const refresh = useCallback(async () => {
     if (!canPreview) {
@@ -341,10 +347,13 @@ export function App() {
       }
       const p = profiles.find((x) => x.id === id);
       if (p?.default_region) {
-        setState((s) => ({
-          ...s,
-          region: s.region.trim() ? s.region : p.default_region!,
-        }));
+        setState((s) => {
+          if (s.region.trim() || (s.regions && s.regions.length > 0)) {
+            return s;
+          }
+          const dr = p.default_region!;
+          return { ...s, region: dr, regions: [dr] };
+        });
       }
     },
     [profiles, setState]
@@ -597,7 +606,7 @@ export function App() {
         <header className="m43-site-header">
           <h1>iac-builder</h1>
           <p className="m43-intro">
-            Walk through <strong>framework</strong>, <strong>cloud</strong>, and <strong>region</strong>, then an
+            Walk through <strong>framework</strong>, <strong>cloud</strong>, and <strong>target region(s)</strong>, then an
             optional <strong>AWS profile</strong> for discovery, then <strong>network and compute</strong>. The code
             preview updates as you go. A <strong>subnet</strong> (or your target’s equivalent) is always required; on
             AWS, <strong>VPC</strong> is optional and unlocks list hints when a profile is set. The same form covers
@@ -792,7 +801,7 @@ export function App() {
               aria-describedby={fieldErr.cloud ? cloudErrId : undefined}
               value={state.cloud}
               onChange={(e) =>
-                setState((s) => ({ ...s, cloud: e.target.value as CloudId, region: "" }))
+                setState((s) => ({ ...s, cloud: e.target.value as CloudId, region: "", regions: [] }))
               }
             >
               {CLOUD_OPTIONS.map((c) => (
@@ -809,11 +818,60 @@ export function App() {
           </div>
         )}
 
-        {canShowRegion && (
+        {canShowRegion && isAwsCloud(state.cloud) && (
+          <>
+            <ComboboxField
+              label="Primary region (AWS)"
+              value={state.regions[0] ?? state.region}
+              onChange={(v) =>
+                setState((s) => {
+                  const additional = s.regions.slice(1).join(", ");
+                  const merged = mergeAwsRegions(v, additional);
+                  return { ...s, regions: merged, region: merged[0] || "" };
+                })
+              }
+              suggestions={regionOpts}
+              placeholder={regionPlaceholderForCloud("aws")}
+              help={
+                <>
+                  {regionFieldHelp("aws")} Used for read-only discovery (VPC, subnets, keys). Additional regions
+                  are included in generated IaC only.
+                </>
+              }
+              error={fieldErr.regions}
+              aria-label="Primary AWS region"
+            />
+            <div className={fieldClass}>
+              <label htmlFor="wizard-regions-extra">Additional AWS regions (optional)</label>
+              <p className="help">
+                Comma-separated region ids (e.g. <code>us-west-2</code>, <code>eu-west-1</code>). The same subnet
+                and AMI are copied for each—replace with region-correct values before apply.
+              </p>
+              <input
+                id="wizard-regions-extra"
+                className={inputClass}
+                value={state.regions.length > 1 ? state.regions.slice(1).join(", ") : ""}
+                onChange={(e) =>
+                  setState((s) => {
+                    const first = s.regions[0] ?? s.region;
+                    const merged = mergeAwsRegions(first, e.target.value);
+                    return { ...s, regions: merged, region: merged[0] || "" };
+                  })
+                }
+                placeholder="e.g. us-west-2, eu-central-1"
+                aria-label="Additional AWS regions"
+                autoComplete="off"
+              />
+            </div>
+          </>
+        )}
+        {canShowRegion && !isAwsCloud(state.cloud) && (
           <ComboboxField
             label="Region"
             value={state.region}
-            onChange={(v) => setState((s) => ({ ...s, region: v }))}
+            onChange={(v) =>
+              setState((s) => ({ ...s, region: v, regions: v.trim() ? [v.trim()] : [] }))
+            }
             suggestions={regionOpts}
             placeholder={regionPlaceholderForCloud(state.cloud || "aws")}
             help={<>{regionFieldHelp(state.cloud || "aws")}</>}
@@ -900,7 +958,7 @@ export function App() {
               help={vpcFieldHelp(
                 isAwsCloud(state.cloud),
                 selectedProfileId.trim() !== "",
-                state.region
+                discoveryRegion
               )}
               aria-label={networkLabels.vpc}
             />

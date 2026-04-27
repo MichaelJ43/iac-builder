@@ -3,10 +3,11 @@ import { emptyWizardState, type WizardState } from "@ui/api";
 import { AI_ASSIST_CONTEXT_VERSION, buildAiContextForAiAssist } from "@ui/aiAssistPolicy";
 
 describe("buildAiContextForAiAssist", () => {
-  it("returns v1 app shape and field mapping", () => {
+  it("returns v2 app shape and field mapping", () => {
     const s: WizardState = {
       ...emptyWizardState(),
       framework: "terraform",
+      regions: ["us-west-2"],
       region: "us-west-2",
       vpc_id: "vpc-a",
       subnet_id: "subnet-b",
@@ -22,6 +23,7 @@ describe("buildAiContextForAiAssist", () => {
     const c = buildAiContextForAiAssist(s);
     expect(c.v).toBe(AI_ASSIST_CONTEXT_VERSION);
     expect(c.app).toBe("iac-builder");
+    expect(c.wizard.regions).toEqual(["us-west-2"]);
     expect(c.wizard.subnet_id).toBe("subnet-b");
     expect(c.wizard.security_group_count).toBe(2);
     expect(c.wizard.ssh_cidr_configured).toBe(true);
@@ -29,8 +31,8 @@ describe("buildAiContextForAiAssist", () => {
   });
 
   it("is stable for identical input", () => {
-    const a = { ...emptyWizardState(), region: "eu-central-1" };
-    const b = { ...emptyWizardState(), region: "eu-central-1" };
+    const a = { ...emptyWizardState(), regions: ["eu-central-1"], region: "eu-central-1" };
+    const b = { ...emptyWizardState(), regions: ["eu-central-1"], region: "eu-central-1" };
     const ca = buildAiContextForAiAssist(a);
     const cb = buildAiContextForAiAssist(b);
     expect(ca.stateSummaryLabel).toBe(cb.stateSummaryLabel);

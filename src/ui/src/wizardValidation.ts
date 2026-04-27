@@ -1,4 +1,5 @@
 import { FRAMEWORK_IDS, type CloudId, type Framework, type WizardState } from "./api";
+import { MAX_TARGET_REGIONS, targetRegionsFromState } from "./wizardRegions";
 
 export type WizardFieldErrorKey = keyof WizardState;
 
@@ -23,9 +24,15 @@ export function validateWizardForPreview(state: WizardState): {
   }
   const isAws = (state.cloud as string) === "aws" || !state.cloud;
 
-  const region = state.region.trim();
-  if (!region) {
-    fields.region = "Region is required.";
+  const targetRegions = targetRegionsFromState(state);
+  if (targetRegions.length === 0) {
+    if (isAws) {
+      fields.regions = "Set a primary AWS region (and optional additional regions, comma‑separated).";
+    } else {
+      fields.region = "Region is required.";
+    }
+  } else if (targetRegions.length > MAX_TARGET_REGIONS) {
+    fields.regions = `At most ${MAX_TARGET_REGIONS} target regions.`;
   }
 
   const subnet = state.subnet_id.trim();
