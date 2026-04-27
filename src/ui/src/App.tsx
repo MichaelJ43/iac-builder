@@ -579,26 +579,34 @@ export function App() {
         <header className="m43-site-header">
           <h1>iac-builder</h1>
           <p className="m43-intro">
-            Guided IaC for a single compute VM: <strong>framework</strong>, <strong>cloud</strong>, and{" "}
-            <strong>region</strong>, then an optional <strong>AWS profile</strong> for discovery, then network and
-            compute. <strong>Starter</strong> templates and <strong>server presets</strong> are shortcuts — optional.
+            Walk through <strong>framework</strong>, <strong>cloud</strong>, and <strong>region</strong>, then an
+            optional <strong>AWS profile</strong> for discovery, then <strong>network and compute</strong>. The code
+            preview updates as you go. A <strong>subnet</strong> (or your target’s equivalent) is always required; on
+            AWS, <strong>VPC</strong> is optional and unlocks list hints when a profile is set. The same form covers
+            AWS and other cloud starters (GCP, OCI) plus Kubernetes, Ansible, and VMware. Optional shortcuts: bundled
+            starters and server presets.
           </p>
           {operationsInfo && (
-            <p className="help" role="status">
-              <strong>API deployment</strong>: this instance is in <code>{operationsInfo.region.current}</code> (active
-              API regions: {operationsInfo.region.enabled.join(", ")}). See <code>GET /api/v1/operations</code> for
-              region catalog and posture.
-            </p>
+            <details className="wizard-header-details">
+              <summary>About this API deployment</summary>
+              <p className="help" role="status">
+                This instance: <code>{operationsInfo.region.current}</code>. Active API regions:{" "}
+                {operationsInfo.region.enabled.join(", ")}. Full deployment posture, catalog, and telemetry options
+                are in the <code>operations</code> JSON (for operators and tools): <code>/api/v1/operations</code>
+              </p>
+            </details>
           )}
         </header>
         {operatorGuards?.any_enabled && (
-          <p className="help m43-operator-guards" role="status">
-            The API enforces <strong>operator security guardrails</strong> (the server <code>IAC_*</code> environment).
-            Inappropriate combinations may return an error for code preview. See the project <code>docs/security.md</code>{" "}
-            and <code>GET /api/v1/operator/guards</code> for the active flags.
-          </p>
+          <details className="wizard-header-details m43-operator-guards">
+            <summary>Operator security guardrails are on</summary>
+            <p className="help" role="status">
+              The server may reject some preview requests based on <code>IAC_*</code> environment. See{" "}
+              <code>docs/security.md</code> and the <code>operator/guards</code> JSON (same shape as the UI fetch).
+            </p>
+          </details>
         )}
-        <div className="wizard-toolbar">
+        <div className="wizard-toolbar" id="wizard-toolbar">
           <button type="button" className={toolbarButtonClass} onClick={undo} disabled={!canUndo}>
             Undo
           </button>
@@ -621,15 +629,16 @@ export function App() {
             type="button"
             className={toolbarButtonClass}
             onClick={() => importFileRef.current?.click()}
+            id="wizard-import-json"
             aria-describedby="toolbar-json-hint"
-            aria-label="Import configuration from a JSON file on your device"
+            aria-label="Import JSON from your device (replaces the wizard)"
           >
-            Import configuration
+            Import JSON
           </button>
         </div>
         <p className="help wizard-toolbar__hint" id="toolbar-json-hint">
-          <strong>Import configuration</strong> replaces the current wizard. <strong>Create from JSON file</strong> in{" "}
-          <strong>Server presets</strong> below only adds a v1 export to the API; it does not change the form.
+          <strong>Import JSON</strong> replaces the current wizard. <strong>Create from JSON file</strong> in{" "}
+          <a href="#server-presets">Server presets (API)</a> uploads to the API only and does not change the form.
         </p>
         {importErr && <p className={errorClass}>{importErr}</p>}
 
@@ -684,15 +693,6 @@ export function App() {
           </div>
           {selectedStarter && <p className="help">{selectedStarter.description}</p>}
         </div>
-
-
-
-        <p className="help">
-          This flow targets a single compute unit in one place: <code>aws_instance</code> on AWS, Terraform starters
-          for Google Cloud and OCI, and Kubernetes (YAML), Ansible, or vSphere (Terraform) for non-cloud or hybrid.{" "}
-          <strong>Subnet (or subnetwork, host, or port group, depending on target)</strong> is required. On AWS,{" "}
-          <strong>VPC</strong> is optional; setting it unlocks read-only lists when a credential profile is selected.
-        </p>
         {err && <p className={errorClass}>{err}</p>}
 
         <div className={fieldClass}>

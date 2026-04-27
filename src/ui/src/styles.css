@@ -89,6 +89,19 @@ body {
   padding: 1.5rem;
   max-width: 720px;
 }
+.wizard-header-details {
+  margin: 0.5rem 0 0;
+  max-width: 42rem;
+}
+.wizard-header-details summary {
+  cursor: pointer;
+  font-size: 0.9rem;
+  color: var(--ib-fg-muted);
+  font-weight: 600;
+}
+.wizard-header-details .help {
+  margin: 0.35rem 0 0;
+}
 .slider {
   width: var(--ib-slider-width);
   border-left: 1px solid var(--ib-border);
