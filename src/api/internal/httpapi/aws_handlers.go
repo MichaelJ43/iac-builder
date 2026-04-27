@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/MichaelJ43/iac-builder/api/internal/awsx"
+	"github.com/MichaelJ43/iac-builder/api/internal/store"
 	"github.com/go-chi/chi/v5"
 )
 
@@ -145,7 +146,12 @@ func (s *Server) handleCreatePreset(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "name required"})
 		return
 	}
-	id, err := s.Store.CreatePreset(r.Context(), body.Name, body.Data)
+	normalized, err := store.NormalizePresetData(body.Data)
+	if err != nil {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid preset data: " + err.Error()})
+		return
+	}
+	id, err := s.Store.CreatePreset(r.Context(), body.Name, normalized)
 	if err != nil {
 		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
 		return
@@ -180,5 +186,16 @@ func (s *Server) handleListPresets(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"presets": list})
+	label := strings.TrimSpace(strings.ToLower(r.URL.Query().Get("label")))
+	if label == "" {
+		writeJSON(w, http.StatusOK, map[string]any{"presets": list})
+		return
+	}
+	var filtered []store.PresetSummary
+	for _, p := range list {
+		if store.LabelsListContains(p.Labels, label) {
+			filtered = append(filtered, p)
+		}
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"presets": filtered})
 }

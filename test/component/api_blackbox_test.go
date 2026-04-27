@@ -537,3 +537,86 @@ func TestAIAssist_RateLimit(t *testing.T) {
 		t.Fatalf("expected 429, got %d", res.StatusCode)
 	}
 }
+
+func TestPresets_CreateV1_AndListFilter(t *testing.T) {
+	t.Setenv("IAC_DEFAULT_PRESET_LABELS", "platform, shared")
+	h, cleanup, err := export.NewTestHandler("file::memory:?cache=shared", mustDecodeHex(testMasterKeyHex))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer cleanup()
+	srv := httptest.NewServer(h)
+	defer srv.Close()
+
+	st := map[string]any{
+		"framework": "terraform", "cloud": "aws", "region": "us-east-1",
+		"subnet_id": "subnet-1", "instance_type": "t3.micro", "ami": "ami-1", "key_name": "",
+		"security_group_ids": []string{"sg-1"}, "associate_public_ip": false,
+		"imdsv2_required": true, "enable_ebs_encryption": true, "ssh_cidr": "",
+		"app_secretsmanager_secret_name": "", "app_ssm_parameter_name": "",
+	}
+	createBody, _ := json.Marshal(map[string]any{
+		"name": "p1",
+		"data": map[string]any{
+			"format_version": 1,
+			"labels":         []string{"team-a"},
+			"state":          st,
+		},
+	})
+	res, err := http.Post(srv.URL+"/api/v1/presets", "application/json", bytes.NewReader(createBody))
+	if err != nil {
+		t.Fatal(err)
+	}
+	res.Body.Close()
+	if res.StatusCode != http.StatusCreated {
+		t.Fatalf("create: %d", res.StatusCode)
+	}
+
+	res, err = http.Get(srv.URL + "/api/v1/presets")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.StatusCode != http.StatusOK {
+		t.Fatalf("list: %d", res.StatusCode)
+	}
+	var listOut struct {
+		Presets []struct {
+			Name   string   `json:"name"`
+			Labels []string `json:"labels"`
+		} `json:"presets"`
+	}
+	if err := json.NewDecoder(res.Body).Decode(&listOut); err != nil {
+		t.Fatal(err)
+	}
+	res.Body.Close()
+	if len(listOut.Presets) != 1 {
+		t.Fatalf("presets: %+v", listOut)
+	}
+	if !containsStr(listOut.Presets[0].Labels, "platform") {
+		t.Fatalf("expected default label merged: %v", listOut.Presets[0].Labels)
+	}
+	if !containsStr(listOut.Presets[0].Labels, "team-a") {
+		t.Fatalf("expected user label: %v", listOut.Presets[0].Labels)
+	}
+
+	res, err = http.Get(srv.URL + "/api/v1/presets?label=nonexistent-xyz")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer res.Body.Close()
+	if err := json.NewDecoder(res.Body).Decode(&listOut); err != nil {
+		t.Fatal(err)
+	}
+	if len(listOut.Presets) != 0 {
+		t.Fatalf("filter: %+v", listOut.Presets)
+	}
+}
+
+func containsStr(s []string, want string) bool {
+	for _, x := range s {
+		if x == want {
+			return true
+		}
+	}
+	return false
+}

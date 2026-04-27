@@ -12,7 +12,7 @@ Read this file at the start of substantive work on this repository, and refresh 
 
 - Application code: [`src/api`](src/api) (Go module `github.com/MichaelJ43/iac-builder/api`), [`src/ui`](src/ui) (TypeScript + React).
 - Automated tests: [`test/component`](test/component) (Go black-box HTTP tests), [`test/unit/ui`](test/unit/ui) (Vitest specs; executed via `npm run test:unit` from [`src/ui`](src/ui)), [`test/ui`](test/ui) (Playwright). Go unit tests live next to packages under `src/api` (standard Go layout); TypeScript tests stay under `test/` per project conventions.
-- Docs: [`docs`](docs). Roadmap: [`docs/future-ideas.md`](docs/future-ideas.md).
+- Docs: [`docs`](docs). Roadmap: [`docs/future-ideas.md`](docs/future-ideas.md). Presets & catalog: [`docs/presets-and-catalog.md`](docs/presets-and-catalog.md).
 
 ## How to run tests
 
