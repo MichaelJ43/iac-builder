@@ -1033,13 +1033,20 @@ export function App() {
         >
           <summary className="preset-compare__summary">Server presets (API)</summary>
           <p className="help">
-            Presets are stored on the server. <strong>Load into wizard</strong> replaces your answers (Undo
-            reverts). <strong>Set baseline</strong> diffs without changing the form. <strong>Download as JSON</strong>{" "}
-            uses the same file shape as <strong>Export configuration</strong> for sharing.{" "}
-            <strong>Create from JSON file</strong> uploads a v1 file to the API. <strong>Delete</strong> removes a
-            preset from the API. Presets v1+ support <strong>labels</strong> (team/org “library” tags); the API can
-            also merge defaults from <code>IAC_DEFAULT_PRESET_LABELS</code>.
+            Presets live on the server. <strong>Load into wizard</strong> replaces the form (Undo reverts).{" "}
+            <strong>Set baseline</strong> diffs without changing the form. <strong>Download as JSON</strong> uses the
+            same v1 shape as <strong>Export configuration</strong>. <strong>Save to API as preset</strong> stores the
+            current wizard; <strong>Create from JSON file</strong> uploads a v1 file to the API only. Optional import
+            name defaults to the file basename. <strong>Delete</strong> removes a preset. Filter and pick a row below, then
+            an action.
           </p>
+          <details className="wizard-header-details">
+            <summary>Labels and default tags</summary>
+            <p className="help">
+              Preset v1+ supports <strong>labels</strong> (team/org library tags). The API may merge{" "}
+              <code>IAC_DEFAULT_PRESET_LABELS</code> on create.
+            </p>
+          </details>
           {presetListErr && <p className="preset-compare__err m43-message--error">{presetListErr}</p>}
           {presetActionErr && <p className="preset-compare__err m43-message--error">{presetActionErr}</p>}
           {presetLabelOptions.length > 0 && (
@@ -1147,12 +1154,6 @@ export function App() {
               {presetDeleteBusy ? "Deleting…" : "Delete preset"}
             </button>
           </div>
-          <p className="help">
-            Create a new preset from the <strong>current wizard</strong> or a <strong>v1 JSON file</strong> (export /
-            download format). The name field is optional for file import: if empty, the file’s basename (without{" "}
-            <code>.json</code>) is used. Optional <strong>labels</strong> (comma-separated) are stored with the preset for
-            filtering; the server can also add defaults from the environment.
-          </p>
           <div className="preset-compare__row">
             <input
               className={inputClass}
