@@ -21,30 +21,6 @@ variable "cloudfront_price_class" {
   default     = "PriceClass_100"
 }
 
-variable "alb_https_enabled" {
-  type        = bool
-  description = "When true, ALB serves TLS on 443 with the ACM certificate, port 80 redirects to HTTPS, and CloudFront uses HTTPS to the API origin. Requires api_public_hostname (DNS CNAME to the ALB, names on the certificate) and alb_certificate_arn (ACM in the same region as the ALB)."
-  default     = false
-}
-
-variable "alb_certificate_arn" {
-  type        = string
-  description = "Legacy: ACM certificate on the ALB (same region as the ALB). When custom_domain + acm_certificate_arn are set, the same public certificate is used automatically and this is ignored for the listener."
-  default     = ""
-}
-
-variable "api_public_hostname" {
-  type        = string
-  description = "Legacy: FQDN for the API origin (must be on the ALB cert). When custom_domain + acm_certificate_arn are set, api_custom_domain or api.<custom_domain> is used and this is ignored."
-  default     = ""
-}
-
-variable "api_custom_domain" {
-  type        = string
-  description = "Optional API origin hostname used with custom_domain + acm_certificate_arn. Defaults to api.<custom_domain>; previews can pass sibling names such as api-pr-123.example.com."
-  default     = ""
-}
-
 variable "custom_domain" {
   type        = string
   description = "Optional CloudFront alternate domain (e.g. iacbuilder.example.com). Only applied when acm_certificate_arn is also set. ACM public certificate must be in us-east-1 and include this name (DNS validation recommended)."

@@ -1,6 +1,5 @@
 locals {
-  create_route53_records     = local.use_custom_domain && trimspace(var.route53_hosted_zone_id) != ""
-  create_route53_api_records = local.create_route53_records && local.use_custom_domain
+  create_route53_records = local.use_custom_domain && trimspace(var.route53_hosted_zone_id) != ""
 }
 
 data "aws_route53_zone" "app" {
@@ -31,31 +30,5 @@ resource "aws_route53_record" "app_apex_aaaa" {
     name                   = aws_cloudfront_distribution.app.domain_name
     zone_id                = aws_cloudfront_distribution.app.hosted_zone_id
     evaluate_target_health = false
-  }
-}
-
-resource "aws_route53_record" "api_a" {
-  count   = local.create_route53_api_records ? 1 : 0
-  zone_id = var.route53_hosted_zone_id
-  name    = trimsuffix(local.api_fqdn_for_r53, ".${data.aws_route53_zone.app[0].name}")
-  type    = "A"
-
-  alias {
-    name                   = aws_lb.api.dns_name
-    zone_id                = aws_lb.api.zone_id
-    evaluate_target_health = true
-  }
-}
-
-resource "aws_route53_record" "api_aaaa" {
-  count   = local.create_route53_api_records ? 1 : 0
-  zone_id = var.route53_hosted_zone_id
-  name    = trimsuffix(local.api_fqdn_for_r53, ".${data.aws_route53_zone.app[0].name}")
-  type    = "AAAA"
-
-  alias {
-    name                   = aws_lb.api.dns_name
-    zone_id                = aws_lb.api.zone_id
-    evaluate_target_health = true
   }
 }

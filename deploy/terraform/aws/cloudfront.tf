@@ -1,26 +1,11 @@
 locals {
   custom_domain_host = trimspace(var.custom_domain)
   use_custom_domain  = local.custom_domain_host != "" && trimspace(var.acm_certificate_arn) != ""
-  # With a browser site certificate (custom_domain + acm), use the same ACM on the ALB and pin the API
-  # origin to api.<custom_domain> by default. Previews can pass a sibling hostname such as api-pr-123.<domain>.
-  api_custom_domain_host        = trimspace(var.api_custom_domain)
-  api_public_hostname_effective = local.use_custom_domain ? (local.api_custom_domain_host != "" ? local.api_custom_domain_host : "api.${local.custom_domain_host}") : trimspace(var.api_public_hostname)
-  alb_certificate_arn_effective = local.use_custom_domain ? trimspace(var.acm_certificate_arn) : trimspace(var.alb_certificate_arn)
-  # Legacy: explicit alb_https_enabled + alb_certificate_arn + api_public_hostname without CloudFront custom domain.
-  alb_https_enabled_effective = local.use_custom_domain || (
-    var.alb_https_enabled && trimspace(var.alb_certificate_arn) != "" && trimspace(var.api_public_hostname) != ""
-  )
-  api_fqdn_for_r53 = local.api_public_hostname_effective
-  # CloudFront must use a hostname present on the origin certificate when using HTTPS.
-  # The default ALB DNS name cannot use a typical ACM cert, so we use api_public_hostname when TLS is on.
-  cloudfront_api_origin_domain   = local.alb_https_enabled_effective ? local.api_public_hostname_effective : aws_lb.api.dns_name
-  cloudfront_api_origin_protocol = local.alb_https_enabled_effective ? "https-only" : "http-only"
-  # depends_on must be a static list (no concat). Referencing the listener here ties
-  # CloudFront updates to listener creation. Use length() so https[0] is never indexed when count=0.
-  cloudfront_listener_dep_id = length(aws_lb_listener.https) > 0 ? aws_lb_listener.https[0].id : aws_lb_listener.http.id
-  # AWS limits distribution comment to 128 chars; listener id is a long ARN.
+  # Lambda Function URL: strip https:// — CloudFront custom_origin expects host only (see aws_lambda_function_url.api).
+  cloudfront_api_origin_domain   = trimsuffix(trimprefix(trimspace(aws_lambda_function_url.api.function_url), "https://"), "/")
+  cloudfront_api_origin_protocol = "https-only"
   cloudfront_comment = substr(
-    "${var.project_name} UI + API (${substr(sha256(local.cloudfront_listener_dep_id), 0, 16)})",
+    "${var.project_name} UI + API (${substr(sha256(aws_lambda_function_url.api.function_url), 0, 16)})",
     0,
     128,
   )
@@ -122,6 +107,7 @@ resource "aws_cloudfront_distribution" "app" {
 
   depends_on = [
     aws_s3_bucket_policy.ui,
-    aws_lb_listener.http,
+    aws_lambda_function_url.api,
+    aws_lambda_permission.function_url,
   ]
 }

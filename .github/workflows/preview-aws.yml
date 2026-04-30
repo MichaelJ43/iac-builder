@@ -1,4 +1,4 @@
-name: Preview AWS (S3 + CloudFront + ALB + Lambda)
+name: Preview AWS (S3 + CloudFront + Lambda Function URL)
 
 on:
   pull_request:
@@ -86,14 +86,12 @@ jobs:
         run: |
           set -euo pipefail
           PREVIEW_SITE_DOMAIN="pr-${PR_NUMBER}.${TF_CUSTOM_DOMAIN}"
-          PREVIEW_API_DOMAIN="api-pr-${PR_NUMBER}.${TF_CUSTOM_DOMAIN}"
 
           terraform apply -auto-approve -input=false \
             -var="aws_region=${AWS_REGION}" \
             -var="project_name=${PROJECT_NAME}" \
             -var="lambda_package=$GITHUB_WORKSPACE/dist/lambda.zip" \
             -var="custom_domain=${PREVIEW_SITE_DOMAIN}" \
-            -var="api_custom_domain=${PREVIEW_API_DOMAIN}" \
             -var="acm_certificate_arn=${TF_ACM_CERTIFICATE_ARN}" \
             -var="route53_hosted_zone_id=${TF_ROUTE53_HOSTED_ZONE_ID}"
 
@@ -101,7 +99,7 @@ jobs:
         id: tf
         run: |
           echo "app_url=$(terraform output -raw app_url)" >> "$GITHUB_OUTPUT"
-          echo "api_public_hostname=$(terraform output -raw api_public_hostname)" >> "$GITHUB_OUTPUT"
+          echo "api_function_url_host=$(terraform output -raw api_function_url_host)" >> "$GITHUB_OUTPUT"
           echo "cloudfront_domain_name=$(terraform output -raw cloudfront_domain_name)" >> "$GITHUB_OUTPUT"
           echo "cloudfront_distribution_id=$(terraform output -raw cloudfront_distribution_id)" >> "$GITHUB_OUTPUT"
           echo "ui_bucket_name=$(terraform output -raw ui_bucket_name)" >> "$GITHUB_OUTPUT"
@@ -143,7 +141,7 @@ jobs:
               '### Preview deployment',
               '',
               '- Site: ${{ steps.tf.outputs.app_url }}',
-              '- API origin: ${{ steps.tf.outputs.api_public_hostname }}',
+              '- API origin (Lambda URL host): ${{ steps.tf.outputs.api_function_url_host }}',
               '- CloudFront: https://${{ steps.tf.outputs.cloudfront_domain_name }}',
               '- GitHub environment: `${{ env.PREVIEW_ENVIRONMENT }}`',
               '- Terraform state: `${{ env.TF_STATE_KEY }}`',
@@ -181,7 +179,7 @@ jobs:
         run: |
           echo "### Preview deployment" >> "$GITHUB_STEP_SUMMARY"
           echo "- Site: ${{ steps.tf.outputs.app_url }}" >> "$GITHUB_STEP_SUMMARY"
-          echo "- API origin: ${{ steps.tf.outputs.api_public_hostname }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- API origin (Lambda URL host): ${{ steps.tf.outputs.api_function_url_host }}" >> "$GITHUB_STEP_SUMMARY"
           echo "- CloudFront: https://${{ steps.tf.outputs.cloudfront_domain_name }}" >> "$GITHUB_STEP_SUMMARY"
           echo "- GitHub environment: \`${PREVIEW_ENVIRONMENT}\`" >> "$GITHUB_STEP_SUMMARY"
           echo "- Terraform state key: \`${TF_STATE_KEY}\`" >> "$GITHUB_STEP_SUMMARY"
@@ -239,14 +237,12 @@ jobs:
         run: |
           set -euo pipefail
           PREVIEW_SITE_DOMAIN="pr-${PR_NUMBER}.${TF_CUSTOM_DOMAIN}"
-          PREVIEW_API_DOMAIN="api-pr-${PR_NUMBER}.${TF_CUSTOM_DOMAIN}"
 
           terraform destroy -auto-approve -input=false \
             -var="aws_region=${AWS_REGION}" \
             -var="project_name=${PROJECT_NAME}" \
             -var="lambda_package=$GITHUB_WORKSPACE/dist/lambda.zip" \
             -var="custom_domain=${PREVIEW_SITE_DOMAIN}" \
-            -var="api_custom_domain=${PREVIEW_API_DOMAIN}" \
             -var="acm_certificate_arn=${TF_ACM_CERTIFICATE_ARN}" \
             -var="route53_hosted_zone_id=${TF_ROUTE53_HOSTED_ZONE_ID}"
 
