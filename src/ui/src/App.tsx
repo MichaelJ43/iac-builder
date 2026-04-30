@@ -83,6 +83,8 @@ export function App() {
   const [importErr, setImportErr] = useState<string | null>(null);
   const [sliderOpen, setSliderOpen] = useState(false);
   const [previewText, setPreviewText] = useState("");
+  /** True while `/api/v1/preview` (and follow-up hints) request is in flight. */
+  const [previewBusy, setPreviewBusy] = useState(false);
   const [hints, setHints] = useState<SecurityRecommendation[]>([]);
   const [err, setErr] = useState<string | null>(null);
   const [operatorGuards, setOperatorGuards] = useState<OperatorGuardsStatus | null>(null);
@@ -313,19 +315,45 @@ export function App() {
       setPreviewText("");
       setHints([]);
       setErr(null);
+      setPreviewBusy(false);
       return;
     }
+    setPreviewBusy(true);
     try {
       setErr(null);
       const files = await preview(state);
       const primary = files["main.tf"] ?? files["template.yaml"] ?? Object.values(files)[0] ?? "";
-      setPreviewText(primary);
+      if (!primary.trim()) {
+        setPreviewText("// Preview returned no usable file (empty emitter output).");
+      } else {
+        setPreviewText(primary);
+      }
       const recs = await securityRecommendations(state);
       setHints(recs);
     } catch (e) {
+      setPreviewText("");
+      setHints([]);
       setErr(errorMessageFromUnknown(e));
+    } finally {
+      setPreviewBusy(false);
     }
   }, [state, canPreview]);
+
+  const codePanelBody = useMemo(() => {
+    if (!canPreview) {
+      return "// fix validation issues in the form to preview";
+    }
+    if (previewBusy && !previewText) {
+      return "// loading preview…";
+    }
+    if (previewText) {
+      return previewText;
+    }
+    if (err) {
+      return "// Preview request failed:\n// " + err.split("\n").join("\n// ");
+    }
+    return "// loading preview…";
+  }, [canPreview, previewBusy, previewText, err]);
 
   useEffect(() => {
     const t = setTimeout(() => {
@@ -1368,12 +1396,7 @@ export function App() {
         {sliderOpen ? "Hide code" : "Show code"}
       </button>
       <aside className={`slider ${sliderOpen ? "open" : ""}`}>
-        <pre>
-          {previewText ||
-            (!canPreview
-              ? "// fix validation issues in the form to preview"
-              : "// loading preview…")}
-        </pre>
+        <pre>{codePanelBody}</pre>
       </aside>
     </div>
   );

@@ -123,7 +123,10 @@ export async function preview(state: WizardState): Promise<Record<string, string
     body: JSON.stringify({ state: stateOut }),
   });
   if (!res.ok) throw new Error(await normalizeFetchError(res));
-  const data = (await res.json()) as { files: Record<string, string> };
+  const data = (await res.json()) as { files?: Record<string, string> };
+  if (!data.files || typeof data.files !== "object") {
+    throw new Error("Malformed preview response (missing files).");
+  }
   return data.files;
 }
 
