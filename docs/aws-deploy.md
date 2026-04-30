@@ -20,8 +20,9 @@ This stack is tuned for **low cost** in a personal account (no Application Load 
    - Attach policies that allow Terraform to manage the resources in [`deploy/terraform/aws`](../deploy/terraform/aws). For a first pass in a sandbox account, **AdministratorAccess** is simplest; narrow over time.
 3. **Least-privilege IAM (optional):** if the deploy role is scoped, ensure it can manage **Lambda Function URLs** and related resource-based policies, for example:
    - `lambda:CreateFunctionUrlConfig`, `lambda:GetFunctionUrlConfig`, `lambda:UpdateFunctionUrlConfig`, `lambda:DeleteFunctionUrlConfig`
-   - `lambda:AddPermission`, `lambda:RemovePermission` for `lambda:InvokeFunctionUrl` (`function_url_auth_type` **NONE** matches the Terraform in this repo)
-4. **GitHub repository configuration** (either **Secrets** or **Variables** — same names; secrets take precedence if both exist)
+   - `lambda:AddPermission`, `lambda:RemovePermission` covering both `lambda:InvokeFunctionUrl` and `lambda:InvokeFunction` (AWS requires both on the function policy for **`AuthType: NONE`** URLs — see [`deploy/terraform/aws/lambda_function_url.tf`](../deploy/terraform/aws/lambda_function_url.tf))
+4. **`hashicorp/aws` Terraform provider** is pinned via [`.terraform.lock.hcl`](../deploy/terraform/aws/.terraform.lock.hcl) (currently **6.x**). Run **`terraform init -upgrade`** if you intentionally raise the **`~>`** constraint in [`versions.tf`](../deploy/terraform/aws/versions.tf).
+5. **GitHub repository configuration** (either **Secrets** or **Variables** — same names; secrets take precedence if both exist)
    - `AWS_DEPLOY_ROLE_ARN` — ARN of the role above.
    - `TF_STATE_BUCKET` — state bucket **name** from step 1 (not an ARN).  
    Prefer **Secrets** for `AWS_DEPLOY_ROLE_ARN` on public repos (variables are readable by anyone with repo read access).
