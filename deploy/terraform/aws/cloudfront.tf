@@ -109,5 +109,6 @@ resource "aws_cloudfront_distribution" "app" {
     aws_s3_bucket_policy.ui,
     aws_lambda_function_url.api,
     aws_lambda_permission.function_url,
+    aws_lambda_permission.function_url_invoke,
   ]
 }
