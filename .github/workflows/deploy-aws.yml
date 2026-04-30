@@ -1,4 +1,4 @@
-name: Deploy AWS (S3 + CloudFront + ALB + Lambda)
+name: Deploy AWS (S3 + CloudFront + Lambda Function URL)
 
 on:
   push:
@@ -38,10 +38,6 @@ jobs:
       # Repository Variables or Secrets (same names). Secrets win if both are set.
       TF_STATE_BUCKET: ${{ secrets.TF_STATE_BUCKET || vars.TF_STATE_BUCKET }}
       AWS_DEPLOY_ROLE_ARN: ${{ secrets.AWS_DEPLOY_ROLE_ARN || vars.AWS_DEPLOY_ROLE_ARN }}
-      # Optional legacy ALB HTTPS without CloudFront custom domain (see docs/aws-setup-walkthrough.md §6b). When
-      # TF_CUSTOM_DOMAIN + TF_ACM_CERTIFICATE_ARN are set, Terraform uses api.<custom_domain> and the same ACM on the ALB; leave these empty.
-      ALB_CERTIFICATE_ARN: ${{ secrets.ALB_CERTIFICATE_ARN }}
-      API_PUBLIC_HOSTNAME: ${{ vars.API_PUBLIC_HOSTNAME }}
       # Optional CloudFront custom domain: TF_CUSTOM_DOMAIN (Variable) + TF_ACM_CERTIFICATE_ARN + optional TF_ROUTE53_HOSTED_ZONE_ID (Secrets). Export only when set so empty strings are not passed as TF_VARs.
       TF_ACM_CERTIFICATE_ARN: ${{ secrets.TF_ACM_CERTIFICATE_ARN }}
       TF_CUSTOM_DOMAIN: ${{ vars.TF_CUSTOM_DOMAIN }}
@@ -92,19 +88,10 @@ jobs:
           if [ -n "${TF_CUSTOM_DOMAIN:-}" ]; then export TF_VAR_custom_domain="${TF_CUSTOM_DOMAIN}"; fi
           if [ -n "${TF_ACM_CERTIFICATE_ARN:-}" ]; then export TF_VAR_acm_certificate_arn="${TF_ACM_CERTIFICATE_ARN}"; fi
           if [ -n "${TF_ROUTE53_HOSTED_ZONE_ID:-}" ]; then export TF_VAR_route53_hosted_zone_id="${TF_ROUTE53_HOSTED_ZONE_ID}"; fi
-          EXTRA_TF_VARS=()
-          if [ -n "${ALB_CERTIFICATE_ARN:-}" ] && [ -n "${API_PUBLIC_HOSTNAME:-}" ]; then
-            EXTRA_TF_VARS+=(
-              -var="alb_https_enabled=true"
-              -var="alb_certificate_arn=${ALB_CERTIFICATE_ARN}"
-              -var="api_public_hostname=${API_PUBLIC_HOSTNAME}"
-            )
-          fi
           terraform apply -auto-approve -input=false \
             -var="aws_region=${{ env.AWS_REGION }}" \
             -var="project_name=${{ env.PROJECT_NAME }}" \
-            -var="lambda_package=$GITHUB_WORKSPACE/dist/lambda.zip" \
-            "${EXTRA_TF_VARS[@]}"
+            -var="lambda_package=$GITHUB_WORKSPACE/dist/lambda.zip"
 
       - uses: actions/setup-node@v4
         with:

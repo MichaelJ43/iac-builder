@@ -1,3 +1,8 @@
+# ARCHIVE — Terraform does not load `*.disabled`.
+# Full snapshot of former `alb_lambda.tf` (before CloudFront → Lambda Function URL).
+# Restoring requires merging with current `cloudfront.tf` / `route53.tf` / `data.tf`, re-adding
+# `validation.tf` subnet check, `random_id.tg_suffix`, and removed `variables`/`locals` for ALB TLS.
+
 resource "aws_security_group" "alb" {
   name_prefix = "${var.project_name}-alb-"
   description = local.alb_https_enabled_effective ? "ALB ingress: HTTP redirect + HTTPS for app" : "ALB ingress for CloudFront origin (HTTP)"
@@ -99,7 +104,7 @@ resource "aws_lambda_function" "api" {
       APP_VERSION      = "0.1.0"
       CORS_ORIGIN      = "*"
       IAC_API_REGION   = var.aws_region
-      # P9: this deployment’s region only; add another stack in another region to grow the enabled set.
+      # P9: this deployment's region only; add another stack in another region to grow the enabled set.
       IAC_API_ENABLED_REGIONS   = var.aws_region
       IAC_DATA_RESIDENCY_REGION = var.aws_region
       IAC_HOSTED_TLS_TERMINATION = local.alb_https_enabled_effective ? "1" : "0"
@@ -142,8 +147,8 @@ resource "aws_lb_listener" "http" {
 }
 
 resource "aws_lb_listener" "https" {
-  count              = local.alb_https_enabled_effective ? 1 : 0
-  load_balancer_arn  = aws_lb.api.arn
+  count             = local.alb_https_enabled_effective ? 1 : 0
+  load_balancer_arn = aws_lb.api.arn
   port               = 443
   protocol           = "HTTPS"
   ssl_policy         = "ELBSecurityPolicy-TLS13-1-2-2021-06"

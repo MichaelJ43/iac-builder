@@ -9,7 +9,7 @@ This is the **same** step-by-step guide as the repo-root file **`AWS_SETUP_WALKT
 
 ## 0. What you need before you start
 
-- An **AWS account** where you are allowed to create IAM roles, S3 buckets, Lambda, ALB, and CloudFront.
+- An **AWS account** where you are allowed to create IAM roles, S3 buckets, Lambda, Lambda Function URLs, and CloudFront.
 - **AWS CLI** installed locally (optional but useful for sanity checks): [Installing the AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html).
 - **Admin access** to the **GitHub repo** (to add Actions secrets and run workflows).
 
@@ -98,7 +98,7 @@ Replace **`YOUR_ACCOUNT_ID`** with your 12-digit AWS account ID (IAM dashboard t
 Terraform needs broad rights the first time you stand this stack up.
 
 - **Simple / lab**: attach **`AdministratorAccess`** (fastest; narrow later).
-- **Stricter**: start from **PowerUserAccess** and add **IAM** permissions Terraform needs to create roles and pass them to Lambda; expect trial-and-error unless you use a pre-scoped policy.
+- **Stricter**: start from **PowerUserAccess** and add **IAM** permissions Terraform needs to create roles and pass them to Lambda; add **Lambda Function URL** APIs if Terraform reports `AccessDenied`: `lambda:CreateFunctionUrlConfig`, `lambda:GetFunctionUrlConfig`, `lambda:UpdateFunctionUrlConfig`, `lambda:DeleteFunctionUrlConfig`, and `lambda:AddPermission` / `lambda:RemovePermission` with `InvokeFunctionUrl` as needed — see [`docs/aws-deploy.md`](aws-deploy.md).
 
 Finish **Create role**. Copy the role’s **ARN** (looks like `arn:aws:iam::123456789012:role/...`). You will use it as **`AWS_DEPLOY_ROLE_ARN`** in step 6.
 
@@ -124,26 +124,18 @@ That only proves your **user** credentials. OIDC is exercised only inside GitHub
    - **`AWS_DEPLOY_ROLE_ARN`** — full IAM role ARN from step 4. Prefer a **Secret** on public repositories (Variables are visible to anyone who can read the repo).
 3. The workflows use `secrets.* || vars.*` for each name; if both are set, the **Secret** wins.
 
-No other configuration is required for the stock workflows **unless** you want **TLS on the ALB** (optional; see §6b).
+No other configuration is required for the minimal stock workflow. Optionally add **`TF_CUSTOM_DOMAIN`**, **`TF_ACM_CERTIFICATE_ARN`** (ACM in **us-east-1** for CloudFront aliases), and **`TF_ROUTE53_HOSTED_ZONE_ID`** for automated DNS aliases to CloudFront — see [`docs/aws-deploy.md`](aws-deploy.md).
 
-### 6b. (Optional) ACM certificate + hostname for ALB HTTPS
+### 6b. (Legacy note) ACM + ALB
 
-Use this when you want the ALB to listen on **443** with a certificate, **redirect HTTP to HTTPS**, and have **CloudFront talk HTTPS** to the origin.
-
-1. **Request a public ACM certificate** in the **same region as the ALB** (for the default stack, **us-east-1**). Include a name you control, e.g. `api.example.com` (DNS validation in Route 53 or your DNS provider).
-2. After Terraform has created the ALB once (first deploy without §6b is fine), create a **DNS CNAME** from that hostname to the **`alb_dns_name`** output (the `*.elb.amazonaws.com` name).
-3. In GitHub **Actions** → **Secrets and variables**:
-   - **`ALB_CERTIFICATE_ARN`** (recommended: **Secret**) — the ACM certificate ARN.
-   - **`API_PUBLIC_HOSTNAME`** (**Variable** is enough) — the same FQDN on the certificate (e.g. `api.example.com`), **no** `https://` prefix.
-
-The **Deploy AWS** and **Destroy AWS** workflows pass these into Terraform when **both** are set, enabling `alb_https_enabled`. If either is unset, the stack stays on **HTTP :80** only for the ALB.
+Previous versions of this stack terminated TLS on an **Application Load Balancer**. That topology is archived as **`deploy/terraform/aws/alb_lambda.tf.disabled`**. **`ALB_CERTIFICATE_ARN`** / **`API_PUBLIC_HOSTNAME`** GitHub configuration is **not** used anymore.
 
 ---
 
 ## 7. Run **Deploy AWS** (first deploy)
 
 1. GitHub → **Actions**.
-2. Select **Deploy AWS (S3 + CloudFront + ALB + Lambda)** in the left list.
+2. Select **Deploy AWS (S3 + CloudFront + Lambda Function URL)** in the left list.
 3. **Run workflow** (right side).
 4. Inputs:
    - **aws_region**: `us-east-1` (default).
@@ -153,7 +145,7 @@ The **Deploy AWS** and **Destroy AWS** workflows pass these into Terraform when 
 Watch the job:
 
 - **Build Lambda zip** — compiles Go for **linux/arm64**.
-- **Terraform init / apply** — creates S3 UI bucket, CloudFront, ALB, Lambda, etc.
+- **Terraform init / apply** — creates S3 UI bucket, CloudFront, Lambda zip deploy, Lambda Function URL, IAM, etc.
 - **Build UI** — `npm ci` + `npm run build`.
 - **Sync UI to S3** — uploads `dist/`.
 - **Invalidate CloudFront** — `/*`.
@@ -167,8 +159,8 @@ Open that URL in a browser. The UI should load; `/api/v1/version` should hit the
 |---------|----------------|
 | `Could not assume role` | Trust policy `sub` matches how GitHub identifies the ref (`refs/heads/main` vs tags, etc.). |
 | `AccessDenied` on S3 state bucket | Role can `s3:GetObject`, `s3:PutObject`, `s3:ListBucket` on the state bucket (AdministratorAccess covers this). |
-| Terraform subnet / ALB error | Default VPC must have **at least two subnets** in **us-east-1** (two AZs). |
-| CloudFront 503 to API | ALB security group / target group / Lambda permission; re-run apply after fixing. |
+| `AccessDenied` on Lambda Function URL Terraform | Narrow IAM policies need Function URL APIs (see step 4b / [`docs/aws-deploy.md`](aws-deploy.md)). |
+| CloudFront 503 to API | Lambda invoke / Function URL permission / CloudFront origin hostname; inspect **Terraform apply** output and Lambda console. |
 
 ---
 
@@ -210,5 +202,4 @@ Terraform destroys resources in dependency order. Empty the state bucket separat
 - [ ] `TF_STATE_BUCKET` = state bucket **name**
 - [ ] `AWS_DEPLOY_ROLE_ARN` = IAM role **ARN**
 - [ ] OIDC trust `sub` matches your repo and branch strategy
-- [ ] Default VPC has ≥ 2 subnets in **us-east-1**
-- [ ] (Optional ALB HTTPS) `ALB_CERTIFICATE_ARN` + `API_PUBLIC_HOSTNAME` + DNS CNAME to ALB
+- [ ] (Optional custom domain / previews) ACM + DNS variables per [`docs/aws-deploy.md`](aws-deploy.md)

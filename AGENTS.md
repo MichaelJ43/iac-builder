@@ -73,4 +73,4 @@ Hand-maintained API contracts are described in user docs; the UI calls JSON endp
 
 ## AWS serverless (optional)
 
-Terraform and GitHub Actions workflows under [`deploy/terraform/aws`](deploy/terraform/aws) and [`.github/workflows/deploy-aws.yml`](.github/workflows/deploy-aws.yml) deploy the UI to **S3** behind **CloudFront**, and the API to **Lambda** behind an **ALB**, with **us-east-1** as the default region. See [`docs/aws-deploy.md`](docs/aws-deploy.md).
+Terraform and GitHub Actions workflows under [`deploy/terraform/aws`](deploy/terraform/aws) and [`.github/workflows/deploy-aws.yml`](.github/workflows/deploy-aws.yml) deploy the UI to **S3** behind **CloudFront**, and the API to **Lambda** via **Lambda Function URL** as the CloudFront origin (**no ALB**), with **us-east-1** as the default region. See [`docs/aws-deploy.md`](docs/aws-deploy.md).

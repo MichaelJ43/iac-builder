@@ -1,8 +1,9 @@
-// Lambda entrypoint: ALB → Lambda invokes the same Chi router as the container API.
+// Lambda entrypoint: CloudFront → Lambda Function URL (HTTP API v2) or legacy ALB (see alb_lambda.tf.disabled).
 package main
 
 import (
 	"context"
+	"encoding/json"
 	"log"
 	"net/http"
 	"os"
@@ -17,6 +18,7 @@ import (
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/awslabs/aws-lambda-go-api-proxy/core"
+	httpadapter "github.com/awslabs/aws-lambda-go-api-proxy/httpadapter"
 )
 
 // albHandler adapts ALB target group events to net/http (same pattern as awslabs gin adapter).
@@ -39,9 +41,35 @@ func (a *albHandler) handle(ctx context.Context, req events.ALBTargetGroupReques
 	return resp, nil
 }
 
+type dualIngress struct {
+	alb *albHandler
+	v2  *httpadapter.HandlerAdapterV2
+}
+
+func (d *dualIngress) handleRaw(ctx context.Context, payload json.RawMessage) (any, error) {
+	var peek struct {
+		Version string `json:"version"`
+	}
+	if err := json.Unmarshal(payload, &peek); err != nil {
+		return nil, err
+	}
+	if peek.Version == "2.0" {
+		var req events.APIGatewayV2HTTPRequest
+		if err := json.Unmarshal(payload, &req); err != nil {
+			return nil, err
+		}
+		return d.v2.ProxyWithContext(ctx, req)
+	}
+	var albReq events.ALBTargetGroupRequest
+	if err := json.Unmarshal(payload, &albReq); err != nil {
+		return nil, err
+	}
+	return d.alb.handle(ctx, albReq)
+}
+
 var (
-	once    sync.Once
-	handler *albHandler
+	once sync.Once
+	dual *dualIngress
 )
 
 func initHandler() {
@@ -77,11 +105,15 @@ func initHandler() {
 			log.Fatalf("ops: %v", err)
 		}
 		srv := &httpapi.Server{Reg: reg, Store: st, Version: ver, Auth: auth.FromEnv(), Ops: o}
-		handler = &albHandler{h: srv.Handler()}
+		h := srv.Handler()
+		dual = &dualIngress{
+			alb: &albHandler{h: h},
+			v2:  httpadapter.NewV2(h),
+		}
 	})
 }
 
 func main() {
 	initHandler()
-	lambda.Start(handler.handle)
+	lambda.Start(dual.handleRaw)
 }

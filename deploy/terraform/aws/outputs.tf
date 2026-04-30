@@ -18,19 +18,9 @@ output "ui_bucket_name" {
   value       = aws_s3_bucket.ui.id
 }
 
-output "alb_dns_name" {
-  description = "Regional ALB hostname (CloudFront is the preferred entry; this is useful for debugging)."
-  value       = aws_lb.api.dns_name
-}
-
-output "alb_https_enabled" {
-  description = "Whether the ALB terminates TLS on 443 and CloudFront uses HTTPS to the API origin (includes custom_domain + acm or legacy alb_https_enabled)."
-  value       = local.alb_https_enabled_effective
-}
-
-output "api_public_hostname" {
-  description = "When ALB TLS is on: FQDN for the CloudFront API origin. With custom domain + ACM, this defaults to api.<custom_domain> unless api_custom_domain is set."
-  value       = local.alb_https_enabled_effective ? local.api_public_hostname_effective : ""
+output "api_function_url_host" {
+  description = "Lambda Function URL hostname (HTTPS). CloudFront is the preferred entry; useful for debugging / curl."
+  value       = local.cloudfront_api_origin_domain
 }
 
 output "lambda_function_name" {

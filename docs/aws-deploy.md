@@ -1,12 +1,12 @@
-# AWS deploy: S3 + CloudFront + ALB + Lambda (us-east-1)
+# AWS deploy: S3 + CloudFront + Lambda Function URL (us-east-1)
 
 **Hand-holding checklist:** use **[`docs/aws-setup-walkthrough.md`](aws-setup-walkthrough.md)** (committed). For a **non-committed** copy with your account IDs and ARNs, copy it to the repo root as **`AWS_SETUP_WALKTHROUGH.local.md`** (that path is **gitignored**).
 
-This stack is tuned for **low cost** in a personal account:
+This stack is tuned for **low cost** in a personal account (no Application Load Balancer hourly charge):
 
-- **CloudFront** (`PriceClass_100`) is the single HTTPS entry: static UI from **S3** (OAI) and `/api/*` + `/healthz` forwarded to a regional **Application Load Balancer**.
-- The **ALB** uses a **Lambda** target (no EC2/Fargate). Same Go `chi` router as containers, packaged as `provided.al2023` with a `bootstrap` binary.
-- **Optional ALB HTTPS** (`alb_https_enabled`): ACM certificate on **443**, **301** from **80 → 443**, and CloudFront **HTTPS-only** to the API origin. Requires an **ACM cert in the same region as the ALB** and a **public hostname** (on that cert) whose DNS **CNAME** points at the ALB. Without this, the stack keeps **HTTP** on port **80** only (still fine behind CloudFront for many setups).
+- **CloudFront** (`PriceClass_100`) is the single HTTPS entry for browsers: static UI from **S3** (OAI) and `/api/*` + `/healthz` forwarded to a **Lambda Function URL** origin (HTTPS).
+- The **Lambda** runs the same Go `chi` router as containers, packaged as `provided.al2023` with a `bootstrap` binary. The handler accepts **HTTP API v2** payloads (Function URL) and can still handle legacy **ALB target group** payloads if you restore archived HCL (see [`deploy/terraform/aws/alb_lambda.tf.disabled`](../deploy/terraform/aws/alb_lambda.tf.disabled)).
+- **`IAC_HOSTED_TLS_TERMINATION`** is set for this stack so operations/telemetry reflect viewer + origin HTTPS.
 - **SQLite on `/tmp`** inside Lambda is **ephemeral** (profiles reset on cold starts). For durable storage, evolve toward **RDS/DynamoDB/EFS** later.
 
 ## Prerequisites
@@ -18,7 +18,10 @@ This stack is tuned for **low cost** in a personal account:
      - `token.actions.githubusercontent.com:aud` = `sts.amazonaws.com`
      - `token.actions.githubusercontent.com:sub` = `repo:MichaelJ43/iac-builder:ref:refs/heads/main` (tighten further with GitHub Environments if you like).
    - Attach policies that allow Terraform to manage the resources in [`deploy/terraform/aws`](../deploy/terraform/aws). For a first pass in a sandbox account, **AdministratorAccess** is simplest; narrow over time.
-3. **GitHub repository configuration** (either **Secrets** or **Variables** — same names; secrets take precedence if both exist)
+3. **Least-privilege IAM (optional):** if the deploy role is scoped, ensure it can manage **Lambda Function URLs** and related resource-based policies, for example:
+   - `lambda:CreateFunctionUrlConfig`, `lambda:GetFunctionUrlConfig`, `lambda:UpdateFunctionUrlConfig`, `lambda:DeleteFunctionUrlConfig`
+   - `lambda:AddPermission`, `lambda:RemovePermission` for `lambda:InvokeFunctionUrl` (`function_url_auth_type` **NONE** matches the Terraform in this repo)
+4. **GitHub repository configuration** (either **Secrets** or **Variables** — same names; secrets take precedence if both exist)
    - `AWS_DEPLOY_ROLE_ARN` — ARN of the role above.
    - `TF_STATE_BUCKET` — state bucket **name** from step 1 (not an ARN).  
    Prefer **Secrets** for `AWS_DEPLOY_ROLE_ARN` on public repos (variables are readable by anyone with repo read access).
@@ -34,38 +37,29 @@ terraform apply \
   -var="aws_region=$AWS_REGION" \
   -var="project_name=iac-builder" \
   -var="lambda_package=$(pwd)/../../../dist/lambda.zip"
-
-# Optional: terminate TLS on the ALB (see docs/aws-setup-walkthrough.md §6b).
-# terraform apply ... \
-#   -var="alb_https_enabled=true" \
-#   -var="alb_certificate_arn=arn:aws:acm:us-east-1:123456789012:certificate/xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" \
-#   -var="api_public_hostname=api.example.com"
 ```
 
 Then build the UI, `aws s3 sync` to the `ui_bucket_name` output, and create a CloudFront invalidation.
 
-The **Deploy AWS** workflow automates build, `terraform apply`, S3 sync, and invalidation.
+The **Deploy AWS** workflow automates build, `terraform apply`, S3 sync, and invalidation — **no manual steps are required after merging to `main`** if the workflow succeeds.
 
 ## Custom domain (optional)
 
-Use an **ACM public certificate in `us-east-1`** (DNS validation) that includes the **site hostname** and, for the ALB, **`api.<site>`** (e.g. include `app.example.com` and `*.app.example.com` for `app.example.com`, or a SAN for `api.app.example.com`). Set repository **Variable** `TF_CUSTOM_DOMAIN` to the site FQDN (no `https://`) and **Secret** `TF_ACM_CERTIFICATE_ARN` to that one cert. Terraform will attach it to **CloudFront** and the **ALB** and will use `api.<TF_CUSTOM_DOMAIN>` as the **CloudFront API origin** hostname (HTTPS to the ALB).
+Use an **ACM public certificate in `us-east-1`** (DNS validation) that includes the **site hostname** (and a **wildcard** covering preview names if you use PR previews, e.g. `*.iacbuilder.michaelj43.dev` when previews use `pr-<n>.iacbuilder.michaelj43.dev`). Set repository **Variable** `TF_CUSTOM_DOMAIN` to the site FQDN (no `https://`) and **Secret** `TF_ACM_CERTIFICATE_ARN` to that cert. Terraform attaches it to **CloudFront** viewer only; the API origin stays the **Lambda Function URL** hostname (AWS-managed TLS between CloudFront and Lambda).
 
-Optional **Secret** `TF_ROUTE53_HOSTED_ZONE_ID` creates **A** and **AAAA** in that public zone: one pair alias to **CloudFront** (browser host) and one pair to the **ALB** (`api.<custom_domain>`), with names derived for apex vs. parent-zone layouts as before.
+Optional **Secret** `TF_ROUTE53_HOSTED_ZONE_ID` creates **A** and **AAAA** alias records to **CloudFront** for the browser hostname (`custom_domain`). Separate **`api.<domain>` DNS records toward an ALB are **not** used in this stack.
 
-You do **not** need `ALB_CERTIFICATE_ARN` or `API_PUBLIC_HOSTNAME` when using the custom domain path; they remain for **legacy** stacks without a CloudFront custom domain that still want ALB TLS.
-
-The **Destroy AWS** workflow uses the same `TF_*` values so destroy matches state. Manual `terraform apply` can use `-var=custom_domain=...`, `-var=acm_certificate_arn=...`, and `-var=route53_hosted_zone_id=...` (optional).
+The **Destroy AWS** workflow uses the same `TF_*` values so destroy matches state.
 
 ## PR previews
 
 The **Preview AWS** workflow creates a full temporary stack for each same-repository pull request and destroys it when the PR closes. Forked PRs are skipped so untrusted code cannot assume the AWS OIDC role.
 
-Preview hostnames are derived from **Variable** `TF_CUSTOM_DOMAIN`:
+Preview hostnames use **Variable** `TF_CUSTOM_DOMAIN`:
 
 - Site: `pr-<number>.<TF_CUSTOM_DOMAIN>` (for example `pr-123.iacbuilder.michaelj43.dev`)
-- API origin: `api-pr-<number>.<TF_CUSTOM_DOMAIN>` (for example `api-pr-123.iacbuilder.michaelj43.dev`)
 
-For `TF_CUSTOM_DOMAIN=iacbuilder.michaelj43.dev`, an ACM certificate covering `iacbuilder.michaelj43.dev` and `*.iacbuilder.michaelj43.dev` covers both production and preview names. The same **Secret** `TF_ROUTE53_HOSTED_ZONE_ID` creates the CloudFront alias and ALB alias records for each preview.
+`/api/*` stays **same-origin** via CloudFront; there is **no separate `api-pr-*`** public hostname or Route 53 alias in this layout (the ACM cert should still include a wildcard that covers preview site names).
 
 Required repository configuration:
 
@@ -90,6 +84,10 @@ If your AWS OIDC trust currently only allows `repo:MichaelJ43/iac-builder:ref:re
 
 Run the **Destroy AWS** workflow (manual). Type `DELETE` in the `confirm` input. It runs `terraform destroy` for the same state key as deploy.
 
+## Legacy ALB topology
+
+The previous ALB-based Terraform is archived as **`deploy/terraform/aws/alb_lambda.tf.disabled`** (Terraform does not load `*.disabled`). Restoring it requires reconciling **`cloudfront.tf` / [`route53.tf`](../deploy/terraform/aws/route53.tf)** references and VPC/subnet data again—not supported by the checked-in defaults.
+
 ## Expanding to N regions
 
 The Terraform root is parameterized with `var.aws_region` (default **us-east-1**). To add another region:
@@ -100,11 +98,12 @@ The Terraform root is parameterized with `var.aws_region` (default **us-east-1**
 
 Front-door options for multi-region users:
 
-- **Route 53** latency records pointing at each regional CloudFront distribution (or regional ALBs if you drop CloudFront in a region—usually not worth it).
+- **Route 53** latency records pointing at each regional CloudFront distribution.
 - **AWS Global Accelerator** in front of regional endpoints if you need static anycast IPs (extra cost).
 
 ## Cost notes
 
 - CloudFront + S3 for static assets is typically **pennies** at low traffic.
-- ALB has an **hourly charge**; keep one ALB per region and avoid extra listeners unless needed.
+- **No ALB**: removes the dominant **fixed hourly** regional charge vs the old stack.
+- Lambda Function URL itself has **no** separate hourly fee; you pay Lambda invoke + duration (256 MB baseline in Terraform).
 - Lambda billing is **per invoke** + duration; keep memory right-sized (256 MB in Terraform as a starting point).
